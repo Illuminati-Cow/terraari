@@ -17,11 +17,14 @@ using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
 using Terraria.Utilities;
 
-namespace Hydrolysist.Content.NPC
+namespace terraari.Content.NPCs
 {
 	// [AutoloadHead] and NPC.townNPC are extremely important and absolutely both necessary for any Town NPC to work at all.
+	// public override string Texture => $"Terraria/Images/NPC_{NPCID.Guide}";
+	// Later, switch to: $"{Mod.Name}/Content/NPCs/{nameof(HydrolysistNpcBody)}"
+
 	[AutoloadHead]
-	public class ExamplePerson : ModNPC
+	public class HydrolysistNpcBody : ModNPC
 	{
 		public const string ShopName = "Shop";
 		public int NumberOfTimesTalkedTo = 0;
@@ -55,7 +58,7 @@ namespace Hydrolysist.Content.NPC
 			// Connects this NPC with a custom emote.
 			// This makes it when the NPC is in the world, other NPCs will "talk about him".
 			// By setting this you don't have to override the PickEmote method for the emote to appear.
-			NPCID.Sets.FaceEmote[Type] = ModContent.EmoteBubbleType<ExamplePersonEmote>();
+			// NPCID.Sets.FaceEmote[Type] = ModContent.EmoteBubbleType<ExamplePersonEmote>();
 
 			// Influences how the NPC looks in the Bestiary
 			NPCID.Sets.NPCBestiaryDrawModifiers drawModifiers = new NPCID.Sets.NPCBestiaryDrawModifiers()
@@ -72,7 +75,7 @@ namespace Hydrolysist.Content.NPC
 			NPC.Happiness
 				.SetBiomeAffection<ForestBiome>(AffectionLevel.Like) // Example Person prefers the forest.
 				.SetBiomeAffection<SnowBiome>(AffectionLevel.Dislike) // Example Person dislikes the snow.
-				.SetBiomeAffection<ExampleSurfaceBiome>(AffectionLevel.Love) // Example Person likes the Example Surface Biome
+				// .SetBiomeAffection<ExampleSurfaceBiome>(AffectionLevel.Love) // Example Person likes the Example Surface Biome
 				.SetNPCAffection(NPCID.Dryad, AffectionLevel.Love) // Loves living near the dryad.
 				.SetNPCAffection(NPCID.Guide, AffectionLevel.Like) // Likes living near the guide.
 				.SetNPCAffection(NPCID.Merchant, AffectionLevel.Dislike) // Dislikes living near the merchant.
@@ -111,85 +114,85 @@ namespace Hydrolysist.Content.NPC
 			AnimationType = NPCID.Guide;
 		}
 
-		public override void SetBestiary(BestiaryDatabase database, BestiaryEntry bestiaryEntry)
-		{
-			// We can use AddRange instead of calling Add multiple times in order to add multiple items at once
-			bestiaryEntry.Info.AddRange([
-				// Sets the preferred biomes of this town NPC listed in the bestiary.
-				// With Town NPCs, you usually set this to what biome it likes the most in regards to NPC happiness.
-				BestiaryDatabaseNPCsPopulator.CommonTags.SpawnConditions.Biomes.Surface,
+		// public override void SetBestiary(BestiaryDatabase database, BestiaryEntry bestiaryEntry)
+		// {
+		// 	// We can use AddRange instead of calling Add multiple times in order to add multiple items at once
+		// 	bestiaryEntry.Info.AddRange([
+		// 		// Sets the preferred biomes of this town NPC listed in the bestiary.
+		// 		// With Town NPCs, you usually set this to what biome it likes the most in regards to NPC happiness.
+		// 		BestiaryDatabaseNPCsPopulator.CommonTags.SpawnConditions.Biomes.Surface,
 
-				// Sets your NPC's flavor text in the bestiary. (use localization keys)
-				new FlavorTextBestiaryInfoElement("Mods.ExampleMod.Bestiary.ExamplePerson_1"),
+		// 		// Sets your NPC's flavor text in the bestiary. (use localization keys)
+		// 		new FlavorTextBestiaryInfoElement("Mods.ExampleMod.Bestiary.ExamplePerson_1"),
 
-				// You can add multiple elements if you really wanted to
-				new FlavorTextBestiaryInfoElement("Mods.ExampleMod.Bestiary.ExamplePerson_2")
-			]);
-		}
+		// 		// You can add multiple elements if you really wanted to
+		// 		new FlavorTextBestiaryInfoElement("Mods.ExampleMod.Bestiary.ExamplePerson_2")
+		// 	]);
+		// }
 
-		public override void HitEffect(NPC.HitInfo hit)
-		{
-			int num = NPC.life > 0 ? 1 : 5;
+		// public override void HitEffect(NPC.HitInfo hit)
+		// {
+		// 	int num = NPC.life > 0 ? 1 : 5;
 
-			for (int k = 0; k < num; k++)
-			{
-				Dust.NewDust(NPC.position, NPC.width, NPC.height, ModContent.DustType<Sparkle>());
-			}
+		// 	for (int k = 0; k < num; k++)
+		// 	{
+		// 		Dust.NewDust(NPC.position, NPC.width, NPC.height, ModContent.DustType<Sparkle>());
+		// 	}
 
-			// Create gore when the NPC is killed.
-			if (Main.netMode != NetmodeID.Server && NPC.life <= 0)
-			{
-				// Retrieve the gore types. This NPC has shimmer and party variants for head, arm, and leg gore. (12 total gores)
-				string variant = "";
-				if (NPC.IsShimmerVariant)
-					variant += "_Shimmer";
-				if (NPC.altTexture == 1)
-					variant += "_Party";
-				int hatGore = NPC.GetPartyHatGore();
-				int headGore = Mod.Find<ModGore>($"{Name}_Gore{variant}_Head").Type;
-				int armGore = Mod.Find<ModGore>($"{Name}_Gore{variant}_Arm").Type;
-				int legGore = Mod.Find<ModGore>($"{Name}_Gore{variant}_Leg").Type;
+		// 	// Create gore when the NPC is killed.
+		// 	if (Main.netMode != NetmodeID.Server && NPC.life <= 0)
+		// 	{
+		// 		// Retrieve the gore types. This NPC has shimmer and party variants for head, arm, and leg gore. (12 total gores)
+		// 		string variant = "";
+		// 		if (NPC.IsShimmerVariant)
+		// 			variant += "_Shimmer";
+		// 		if (NPC.altTexture == 1)
+		// 			variant += "_Party";
+		// 		int hatGore = NPC.GetPartyHatGore();
+		// 		int headGore = Mod.Find<ModGore>($"{Name}_Gore{variant}_Head").Type;
+		// 		int armGore = Mod.Find<ModGore>($"{Name}_Gore{variant}_Arm").Type;
+		// 		int legGore = Mod.Find<ModGore>($"{Name}_Gore{variant}_Leg").Type;
 
-				// Spawn the gores. The positions of the arms and legs are lowered for a more natural look.
-				if (hatGore > 0)
-				{
-					Gore.NewGore(NPC.GetSource_Death(), NPC.position, NPC.velocity, hatGore);
-				}
-				Gore.NewGore(NPC.GetSource_Death(), NPC.position, NPC.velocity, headGore, 1f);
-				Gore.NewGore(NPC.GetSource_Death(), NPC.position + new Vector2(0, 20), NPC.velocity, armGore);
-				Gore.NewGore(NPC.GetSource_Death(), NPC.position + new Vector2(0, 20), NPC.velocity, armGore);
-				Gore.NewGore(NPC.GetSource_Death(), NPC.position + new Vector2(0, 34), NPC.velocity, legGore);
-				Gore.NewGore(NPC.GetSource_Death(), NPC.position + new Vector2(0, 34), NPC.velocity, legGore);
-			}
-		}
+		// 		// Spawn the gores. The positions of the arms and legs are lowered for a more natural look.
+		// 		if (hatGore > 0)
+		// 		{
+		// 			Gore.NewGore(NPC.GetSource_Death(), NPC.position, NPC.velocity, hatGore);
+		// 		}
+		// 		Gore.NewGore(NPC.GetSource_Death(), NPC.position, NPC.velocity, headGore, 1f);
+		// 		Gore.NewGore(NPC.GetSource_Death(), NPC.position + new Vector2(0, 20), NPC.velocity, armGore);
+		// 		Gore.NewGore(NPC.GetSource_Death(), NPC.position + new Vector2(0, 20), NPC.velocity, armGore);
+		// 		Gore.NewGore(NPC.GetSource_Death(), NPC.position + new Vector2(0, 34), NPC.velocity, legGore);
+		// 		Gore.NewGore(NPC.GetSource_Death(), NPC.position + new Vector2(0, 34), NPC.velocity, legGore);
+		// 	}
+		// }
 
-		public override void OnSpawn(IEntitySource source)
-		{
-			if (source is EntitySource_SpawnNPC)
-			{
-				// A TownNPC is "unlocked" once it successfully spawns into the world.
-				TownNPCRespawnSystem.unlockedExamplePersonSpawn = true;
-			}
-		}
+		// public override void OnSpawn(IEntitySource source)
+		// {
+		// 	if (source is EntitySource_SpawnNPC)
+		// 	{
+		// 		// A TownNPC is "unlocked" once it successfully spawns into the world.
+		// 		TownNPCRespawnSystem.unlockedExamplePersonSpawn = true;
+		// 	}
+		// }
 
 		public override bool CanTownNPCSpawn(int numTownNPCs)
 		{ // Requirements for the town NPC to spawn.
-			if (TownNPCRespawnSystem.unlockedExamplePersonSpawn)
-			{
-				// If Example Person has spawned in this world before, we don't require the user satisfying the ExampleItem/ExampleBlock inventory conditions for a respawn.
+			// if (TownNPCRespawnSystem.unlockedExamplePersonSpawn)
+			// {
+			// 	// If Example Person has spawned in this world before, we don't require the user satisfying the ExampleItem/ExampleBlock inventory conditions for a respawn.
 				return true;
-			}
+			// }
 
-			foreach (var player in Main.ActivePlayers)
-			{
-				// Player has to have either an ExampleItem or an ExampleBlock in order for the NPC to spawn
-				if (player.inventory.Any(item => item.type == ModContent.ItemType<ExampleItem>() || item.type == ModContent.ItemType<Items.Placeable.ExampleBlock>()))
-				{
-					return true;
-				}
-			}
+			// foreach (var player in Main.ActivePlayers)
+			// {
+			// 	// Player has to have either an ExampleItem or an ExampleBlock in order for the NPC to spawn
+			// 	if (player.inventory.Any(item => item.type == ModContent.ItemType<ExampleItem>() || item.type == ModContent.ItemType<Items.Placeable.ExampleBlock>()))
+			// 	{
+			// 		return true;
+			// 	}
+			// }
 
-			return false;
+			//  return false;
 		}
 
 
@@ -237,15 +240,15 @@ namespace Hydrolysist.Content.NPC
 			}
 		}
 
-		public override void SetChatButtons(ref string button, ref string button2)
-		{ // What the chat buttons are when you open up the chat UI
-			button = Language.GetTextValue("LegacyInterface.28"); // This is the key to the word "Shop"
-			button2 = "Awesomeify";
-			if (Main.LocalPlayer.HasItem(ItemID.HiveBackpack))
-			{
-				button = "Upgrade " + Lang.GetItemNameValue(ItemID.HiveBackpack);
-			}
-		}
+		// public override void SetChatButtons(ref string button, ref string button2)
+		// { // What the chat buttons are when you open up the chat UI
+		// 	button = Language.GetTextValue("LegacyInterface.28"); // This is the key to the word "Shop"
+		// 	button2 = "Awesomeify";
+		// 	if (Main.LocalPlayer.HasItem(ItemID.HiveBackpack))
+		// 	{
+		// 		button = "Upgrade " + Lang.GetItemNameValue(ItemID.HiveBackpack);
+		// 	}
+		// }
 
 		public override void OnChatButtonClicked(bool firstButton, ref string shop)
 		{
@@ -263,7 +266,7 @@ namespace Hydrolysist.Content.NPC
 					var entitySource = NPC.GetSource_GiftOrReward();
 
 					Main.LocalPlayer.inventory[hiveBackpackItemIndex].TurnToAir();
-					Main.LocalPlayer.QuickSpawnItem(entitySource, ModContent.ItemType<WaspNest>());
+					// Main.LocalPlayer.QuickSpawnItem(entitySource, ModContent.ItemType<WaspNest>());
 
 					return;
 				}
