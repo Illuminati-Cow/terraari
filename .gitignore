@@ -3,3 +3,5 @@ bin/
 .idea/
 .vscode/
 .vs/
+Folder.DotSettings.user
+.husky/_/

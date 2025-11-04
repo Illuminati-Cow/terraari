@@ -1,0 +1,14 @@
+# Enforce LF for all text files
+* text=auto eol=lf
+
+*.cs text eol=lf
+*.json text eol=lf
+*.hjson text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.sh text eol=lf
+
+# Binary files (no line ending conversion)
+*.png binary
+*.jpg binary
+*.dll binary
