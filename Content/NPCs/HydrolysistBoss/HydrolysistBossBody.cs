@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
-using Terraari.Common.Systems;
+using Terraari.Common.StateMachine;
 using Terraria;
-using Terraria.Audio;
 using Terraria.GameContent.ItemDropRules;
-using Terraria.GameContent.RGB;
 using Terraria.Graphics.CameraModifiers;
 using Terraria.ID;
 using Terraria.ModLoader;
@@ -15,56 +13,17 @@ namespace Terraari.Content.NPCs.HydrolysistBoss;
 [AutoloadBossHead]
 public class HydrolysistBossBody : ModNPC
 {
-    // High-level AI overview
-    // ai[0] = State machine selector (see AiState)
-    // ai[1] = State-local timer (ticks)
-    // ai[2] = Projectile id for ritual/anchor projectiles (when used)
-    // ai[3] = Pattern index/phase counter OR link to leader (vanilla Cultist), context-dependent
-    // localAI[0] = One-time spawn init flag
-    // localAI[1] = Clone group id (vanilla Cultist behavior)
-    // localAI[2] = Pose/animation hint (10, 11, 12, 13 used by vanilla sprites)
+    private readonly StateMachine<HydrolysistContext> stateMachine = new([new IdleState()]);
 
-    private enum AiState
+    private float Timer
     {
-        SpawnFadeIn = -1,
-        IdleDecision = 0,
-        MoveSequence = 1,
-        IceMistVolley = 2,
-        FireballBarrage = 3,
-        LightningOrbAndBolts = 4,
-        Ritual = 5,
-        TauntPause = 6,
-        AncientDoomFan = 7,
-        SummonAdds = 8,
+        get => NPC.ai[1];
+        set => NPC.ai[1] = value;
     }
-
-    // Constants extracted for readability (behavior unchanged)
-    private const float AggroRadius = 5600f;
-    private const float SpreadSmall = 0.5235987901687622f; // ~30 degrees
-    private const float SpreadLarge = 1.2566370964050293f; // ~72 degrees
-    private const float TwoPi = (float)Math.PI * 2f;
-    private const float RitualRingRadius = 180f;
-    private const int RitualFadeOutTicks = 30;
-    private const int RitualBetweenTicks = 60; // 30->90 window
-    private const int RitualActiveStart = 120;
-    private const int RitualActiveEnd = 420;
-
-    // Small helpers (no behavior changes)
-    private static List<int> GetLinkedClones(int leaderWhoAmI)
+    private float Phase
     {
-        List<int> cloneIndices = new List<int>();
-        for (int i = 0; i < 200; i++)
-        {
-            if (
-                Main.npc[i].active
-                && Main.npc[i].type == NPCID.CultistBossClone
-                && Main.npc[i].ai[3] == leaderWhoAmI
-            )
-            {
-                cloneIndices.Add(i);
-            }
-        }
-        return cloneIndices;
+        get => NPC.ai[2];
+        set => NPC.ai[2] = value;
     }
 
     private static void FaceHorizontallyTowards(NPC npc, Vector2 target)
@@ -210,6 +169,7 @@ public class HydrolysistBossBody : ModNPC
         {
             // Do something unique when the boss is first killed
         }
+
         NPC.SetEventFlagCleared(ref DownedBossSystem.downedHydrolysistBoss, -1);
     }
 
@@ -239,6 +199,103 @@ public class HydrolysistBossBody : ModNPC
     }
 
     public override void AI()
+    {
+        var context = new HydrolysistContext { Timer = Timer, Phase = Phase };
+        stateMachine.Tick(context);
+        Timer = context.Timer;
+        Phase = context.Phase;
+    }
+
+    private class HydrolysistContext
+    {
+        public float Timer;
+        public float Phase;
+    }
+
+    private class IdleState : IState<HydrolysistContext>
+    {
+        public List<Transition<HydrolysistContext>> Transitions { get; } = [];
+
+        /// <summary>
+        /// Perform the actions required for entering the current state.
+        /// </summary>
+        /// <param name="from">The state from which the transition is occurring.</param>
+        public void Enter(IState<HydrolysistContext> from)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Perform the actions required for exiting the current state.
+        /// </summary>
+        /// <param name="to">The state to which the transition is occurring.</param>
+        public void Exit(IState<HydrolysistContext> to)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Perform the actions of this behavior.
+        /// </summary>
+        public void Tick(HydrolysistContext context)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    //#region Cultist Code
+    private static List<int> GetLinkedClones(int leaderWhoAmI)
+    {
+        List<int> cloneIndices = new List<int>();
+        for (int i = 0; i < 200; i++)
+        {
+            if (
+                Main.npc[i].active
+                && Main.npc[i].type == NPCID.CultistBossClone
+                && Main.npc[i].ai[3] == leaderWhoAmI
+            )
+            {
+                cloneIndices.Add(i);
+            }
+        }
+
+        return cloneIndices;
+    }
+
+    private enum CultistAiState
+    {
+        SpawnFadeIn = -1,
+        IdleDecision = 0,
+        MoveSequence = 1,
+        IceMistVolley = 2,
+        FireballBarrage = 3,
+        LightningOrbAndBolts = 4,
+        Ritual = 5,
+        TauntPause = 6,
+        AncientDoomFan = 7,
+        SummonAdds = 8,
+    }
+
+    // Constants extracted for readability
+    private const float AggroRadius = 5600f;
+    private const float SpreadSmall = 0.5235987901687622f; // ~30 degrees
+    private const float SpreadLarge = 1.2566370964050293f; // ~72 degrees
+    private const float TwoPi = (float)Math.PI * 2f;
+    private const float RitualRingRadius = 180f;
+    private const int RitualFadeOutTicks = 30;
+    private const int RitualBetweenTicks = 60; // 30->90 window
+    private const int RitualActiveStart = 120;
+    private const int RitualActiveEnd = 420;
+
+    // High-level AI overview
+    // ai[0] = State machine selector (see AiState)
+    // ai[1] = State-local timer (ticks)
+    // ai[2] = Projectile id for ritual/anchor projectiles (when used)
+    // ai[3] = Pattern index/phase counter OR link to leader (vanilla Cultist), context-dependent
+    // localAI[0] = One-time spawn init flag
+    // localAI[1] = Clone group id (vanilla Cultist behavior)
+    // localAI[2] = Pose/animation hint (10, 11, 12, 13 used by vanilla sprites)
+    public void _CultistAI()
     {
         // Aliases for AI indices
         ref float aiState = ref NPC.ai[0];
@@ -494,10 +551,10 @@ public class HydrolysistBossBody : ModNPC
             isUnchaseable = true;
         }
         // Main AI state machine
-        switch ((AiState)(int)aiState)
+        switch ((CultistAiState)(int)aiState)
         {
             // Idle/decision state: pick and transition into the next attack pattern
-            case AiState.IdleDecision:
+            case CultistAiState.IdleDecision:
             {
                 TickIdleDecision(
                     player,
@@ -511,14 +568,14 @@ public class HydrolysistBossBody : ModNPC
                 break;
             }
             // Movement wind-up/cooldown utility state used by several patterns
-            case AiState.MoveSequence:
+            case CultistAiState.MoveSequence:
             {
                 TickMoveSequence(ref isInvulnerable);
 
                 break;
             }
             // Ice mist volley (periodic aimed projectiles)
-            case AiState.IceMistVolley:
+            case CultistAiState.IceMistVolley:
             {
                 TickIceMistVolley(
                     player,
@@ -531,7 +588,7 @@ public class HydrolysistBossBody : ModNPC
                 break;
             }
             // Fireball barrage: several aimed bursts from boss and clones
-            case AiState.FireballBarrage:
+            case CultistAiState.FireballBarrage:
             {
                 TickFireballBarrage(
                     player,
@@ -545,7 +602,7 @@ public class HydrolysistBossBody : ModNPC
                 break;
             }
             // Lightning orb phase: spawns a charging orb after allied clone volley
-            case AiState.LightningOrbAndBolts:
+            case CultistAiState.LightningOrbAndBolts:
             {
                 TickLightningOrbAndBolts(
                     player,
@@ -557,28 +614,28 @@ public class HydrolysistBossBody : ModNPC
                 break;
             }
             // Ritual phase: fade-out -> ritual circle -> fade-in & sustained tracking
-            case AiState.Ritual:
+            case CultistAiState.Ritual:
             {
                 TickRitual(player, isLeaderCultist, ref isInvulnerable, ref isUnchaseable);
 
                 break;
             }
             // Short taunt/pause state
-            case AiState.TauntPause:
+            case CultistAiState.TauntPause:
             {
                 TickTauntPause();
 
                 break;
             }
             // Ancient Doom fanned waves from boss and clones
-            case AiState.AncientDoomFan:
+            case CultistAiState.AncientDoomFan:
             {
                 TickAncientDoomFan(player, center, isLeaderCultist, doomInterval, doomRepeats);
 
                 break;
             }
             // Summon adds around the player at random valid tiles
-            case AiState.SummonAdds:
+            case CultistAiState.SummonAdds:
             {
                 TickSummonAdds(player, center, isLeaderCultist, summonInterval, summonRepeats);
 
@@ -1466,4 +1523,6 @@ public class HydrolysistBossBody : ModNPC
             NPC.netUpdate = true;
         }
     }
+
+    //#endregion
 }
