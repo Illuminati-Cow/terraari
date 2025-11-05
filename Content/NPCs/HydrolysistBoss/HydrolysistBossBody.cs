@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Terraari.Common.StateMachine;
+using Terraari.Common.Systems;
 using Terraria;
+using Terraria.DataStructures;
 using Terraria.GameContent.ItemDropRules;
 using Terraria.Graphics.CameraModifiers;
 using Terraria.ID;
@@ -13,17 +15,24 @@ namespace Terraari.Content.NPCs.HydrolysistBoss;
 [AutoloadBossHead]
 public class HydrolysistBossBody : ModNPC
 {
-    private readonly StateMachine<HydrolysistContext> stateMachine = new([new IdleState()]);
+    private StateMachine<HydrolysistContext> stateMachine;
 
-    private float Timer
+    public float Timer
     {
         get => NPC.ai[1];
         set => NPC.ai[1] = value;
     }
-    private float Phase
+
+    public float Phase
     {
         get => NPC.ai[2];
         set => NPC.ai[2] = value;
+    }
+
+    private void SyncState()
+    {
+        NPC.ai[0] = stateMachine.GetSerializedState();
+        NPC.netUpdate = true;
     }
 
     private static void FaceHorizontallyTowards(NPC npc, Vector2 target)
@@ -82,6 +91,31 @@ public class HydrolysistBossBody : ModNPC
         NPC.boss = true;
         NPC.netAlways = true;
         NPC.SpawnWithHigherTime(30);
+    }
+
+    public override void OnSpawn(IEntitySource source)
+    {
+        var idleState = new IdleState();
+        var transformationState = new TransformationState();
+
+        idleState.Transitions =
+        [
+            new Transition<HydrolysistContext>()
+            {
+                To = transformationState,
+                Conditions = [new TransitionCondition { Predicate = () => Timer <= 0 }],
+            },
+        ];
+        transformationState.Transitions =
+        [
+            new Transition<HydrolysistContext>
+            {
+                To = idleState,
+                Conditions = [new TransitionCondition { Predicate = () => Timer <= 0f }],
+            },
+        ];
+
+        stateMachine = new StateMachine<HydrolysistContext>([idleState, transformationState]);
     }
 
     public override bool CanHitPlayer(Player target, ref int cooldownSlot)
@@ -200,46 +234,72 @@ public class HydrolysistBossBody : ModNPC
 
     public override void AI()
     {
-        var context = new HydrolysistContext { Timer = Timer, Phase = Phase };
+        var context = new HydrolysistContext { Boss = this };
         stateMachine.Tick(context);
-        Timer = context.Timer;
-        Phase = context.Phase;
     }
 
     private class HydrolysistContext
     {
-        public float Timer;
-        public float Phase;
+        public HydrolysistBossBody Boss;
     }
 
     private class IdleState : IState<HydrolysistContext>
     {
-        public List<Transition<HydrolysistContext>> Transitions { get; } = [];
+        private const float DECISION_TIME = 60f;
+        public List<Transition<HydrolysistContext>> Transitions { get; set; } = [];
 
-        /// <summary>
-        /// Perform the actions required for entering the current state.
-        /// </summary>
-        /// <param name="from">The state from which the transition is occurring.</param>
-        public void Enter(IState<HydrolysistContext> from)
+        public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
         {
-            throw new NotImplementedException();
+            context.Boss.Timer = DECISION_TIME;
         }
 
-        /// <summary>
-        /// Perform the actions required for exiting the current state.
-        /// </summary>
-        /// <param name="to">The state to which the transition is occurring.</param>
-        public void Exit(IState<HydrolysistContext> to)
+        public void Exit(IState<HydrolysistContext> to, HydrolysistContext context)
         {
-            throw new NotImplementedException();
+            CombatText.NewText(
+                new Rectangle(
+                    (int)context.Boss.NPC.position.X,
+                    (int)context.Boss.NPC.position.Y,
+                    100,
+                    100
+                ),
+                Color.White,
+                $"Transitioning to Poop"
+            );
         }
 
-        /// <summary>
-        /// Perform the actions of this behavior.
-        /// </summary>
         public void Tick(HydrolysistContext context)
         {
-            throw new NotImplementedException();
+            context.Boss.Timer -= 1f;
+        }
+    }
+
+    private class TransformationState : IState<HydrolysistContext>
+    {
+        private const float TRANSFORMATION_TIME = 60f;
+        public List<Transition<HydrolysistContext>> Transitions { get; set; } = [];
+
+        public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
+        {
+            context.Boss.Timer = TRANSFORMATION_TIME;
+        }
+
+        public void Exit(IState<HydrolysistContext> to, HydrolysistContext context)
+        {
+            CombatText.NewText(
+                new Rectangle(
+                    (int)context.Boss.NPC.position.X,
+                    (int)context.Boss.NPC.position.Y,
+                    100,
+                    100
+                ),
+                Color.White,
+                $"Transitioning to {to.GetType().Name}"
+            );
+        }
+
+        public void Tick(HydrolysistContext context)
+        {
+            context.Boss.Timer -= 1f;
         }
     }
 

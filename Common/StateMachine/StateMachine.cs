@@ -8,18 +8,7 @@ public class StateMachine<TContext>
 {
     public List<IState<TContext>> States { get; } = [];
 
-    private IState<TContext> currentState;
-    public IState<TContext> CurrentState
-    {
-        get => currentState;
-        private set
-        {
-            currentState?.Exit(value);
-            currentState = value;
-            currentState?.Enter(PreviousState);
-            PreviousState = value;
-        }
-    }
+    public IState<TContext> CurrentState { get; private set; }
     public IState<TContext> PreviousState { get; private set; }
 
     public StateMachine(ICollection<IState<TContext>> states, int startingStateIndex = 0)
@@ -28,6 +17,10 @@ public class StateMachine<TContext>
         CurrentState = States[startingStateIndex];
     }
 
+    /// <summary>
+    /// Executes the current state's logic and then evaluates state transitions.
+    /// </summary>
+    /// <param name="context">The context used to execute the current state's logic and evaluate transitions.</param>
     public void Tick(TContext context)
     {
         CurrentState.Tick(context);
@@ -39,7 +32,15 @@ public class StateMachine<TContext>
             Console.WriteLine("State machine tried to transition to itself!");
             return;
         }
-        CurrentState = newState;
+        Transition(newState, context);
+    }
+
+    private void Transition(IState<TContext> to, TContext context)
+    {
+        PreviousState = CurrentState;
+        CurrentState?.Exit(to, context);
+        CurrentState = to;
+        CurrentState.Enter(PreviousState, context);
     }
 
     /// <summary>
