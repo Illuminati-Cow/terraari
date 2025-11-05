@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
-using terraari.Common.Systems;
+using Terraari.Common.Systems;
 using Terraria;
 using Terraria.Audio;
 using Terraria.GameContent.ItemDropRules;
@@ -10,7 +10,7 @@ using Terraria.Graphics.CameraModifiers;
 using Terraria.ID;
 using Terraria.ModLoader;
 
-namespace terraari.Content.NPCs.HydrolysistBoss;
+namespace Terraari.Content.NPCs.HydrolysistBoss;
 
 [AutoloadBossHead]
 public class HydrolysistBossBody : ModNPC

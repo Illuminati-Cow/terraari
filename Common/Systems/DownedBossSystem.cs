@@ -1,10 +1,8 @@
-﻿using System.Collections;
-using System.IO;
-using Terraria;
+﻿using System.IO;
 using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
 
-namespace terraari.Common.Systems;
+namespace Terraari.Common.Systems;
 
 // Acts as a container for "downed boss" flags.
 // Set a flag like this in your bosses OnKill hook:

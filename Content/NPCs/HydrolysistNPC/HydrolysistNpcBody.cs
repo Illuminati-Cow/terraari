@@ -6,7 +6,7 @@ using Terraria.ID;
 using Terraria.Localization;
 using Terraria.ModLoader;
 
-namespace terraari.Content.NPCs;
+namespace Terraari.Content.NPCs;
 
 [AutoloadHead]
 public class HydrolysistNpcBody : ModNPC
