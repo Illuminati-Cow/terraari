@@ -1,0 +1,6 @@
+{
+  "rootNamespace": "terraari",
+  "fileMap": {
+    "Content\\Projectiles\\Bubble.cs": "terraari.Content.Projectiles"
+  }
+}

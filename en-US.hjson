@@ -26,5 +26,14 @@ Mods: {
 				}
 			}
 		}
+
+		Items: {
+			BubbleSword: {
+				DisplayName: BubbleSword
+				Tooltip: Pew Pew!
+			}
+		}
+
+		Projectiles.Bubble.DisplayName: Bubble
 	}
 }
