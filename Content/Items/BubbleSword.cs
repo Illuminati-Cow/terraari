@@ -1,8 +1,8 @@
+using Microsoft.Xna.Framework;
+using terraari.Content.Projectiles;
 using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
-using Microsoft.Xna.Framework;
-using terraari.Content.Projectiles;
 
 namespace terraari.Content.Items
 {
@@ -21,7 +21,7 @@ namespace terraari.Content.Items
                 singleShotTime: 35, // useTime & useAnimation
                 shotVelocity: 9f,
                 hasAutoReuse: true
-                );
+            );
 
             Item.damage = 45;
             Item.knockBack = 5f;
@@ -34,10 +34,7 @@ namespace terraari.Content.Items
 
         public override void AddRecipes()
         {
-            CreateRecipe()
-                .AddIngredient(ItemID.Wood, 1)
-                .AddTile(TileID.WorkBenches)
-                .Register();
+            CreateRecipe().AddIngredient(ItemID.Wood, 1).AddTile(TileID.WorkBenches).Register();
         }
     }
 }
