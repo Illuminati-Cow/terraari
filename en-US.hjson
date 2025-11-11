@@ -34,6 +34,10 @@ Mods: {
 			}
 		}
 
-		Projectiles.Bubble.DisplayName: Bubble
+		Projectiles: {
+			Bubble.DisplayName: Bubble
+			BigBubble.DisplayName: Big Bubble
+			SmallBubble.DisplayName: Small Bubble
+		}
 	}
 }

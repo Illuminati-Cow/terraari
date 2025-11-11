@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using ReLogic.Content;
 using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
@@ -8,6 +9,11 @@ namespace terraari.Content.Projectiles
 {
     public class SmallBubble : ModProjectile
     {
+        public override string Texture
+        {
+            get => $"Terraria/Images/Projectile_{ProjectileID.Bubble}";
+        }
+
         public override void Load()
         {
             if (Main.dedServ)
@@ -16,11 +22,10 @@ namespace terraari.Content.Projectiles
 
         public override void SetDefaults()
         {
-            Projectile.Type = 410; // Vanilla Bubble Gun projectile
             Projectile.DamageType = DamageClass.Magic; // Damage class projectile uses
             Projectile.scale = 1f; // Projectile scale multiplier
             Projectile.penetrate = 3; // How many hits projectile have to make before it dies. 3 means projectile will die on 3rd enemy. Setting this to 0 will make projectile die instantly
-            Projectile.aiStyle = 0; // AI style of a projectile. 0 is default bullet AI
+            Projectile.aiStyle = ProjAIStyleID.Bubble; // AI style of a projectile. 0 is default bullet AI
             Projectile.width = Projectile.height = 10; // Hitbox of projectile in pixels
             Projectile.friendly = false; // Can hit enemies?
             Projectile.hostile = true; // Can hit player?

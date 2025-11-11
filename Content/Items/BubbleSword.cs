@@ -17,7 +17,7 @@ namespace terraari.Content.Items
         {
             // Helper method to quickly set basic magic weapon properties
             Item.DefaultToMagicWeapon(
-                projType: ModContent.ProjectileType<Bubble>(), // Our own projectile
+                projType: ModContent.ProjectileType<BigBubble>(), // Our own projectile
                 singleShotTime: 35, // useTime & useAnimation
                 shotVelocity: 9f,
                 hasAutoReuse: true
