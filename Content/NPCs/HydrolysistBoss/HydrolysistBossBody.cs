@@ -9,6 +9,7 @@ using Terraria.GameContent.ItemDropRules;
 using Terraria.Graphics.CameraModifiers;
 using Terraria.ID;
 using Terraria.ModLoader;
+using AnimationFrameData = Terraria.Animation.AnimationFrameData;
 
 namespace Terraari.Content.NPCs.HydrolysistBoss;
 
@@ -29,6 +30,8 @@ public class HydrolysistBossBody : ModNPC
         set => NPC.ai[2] = value;
     }
 
+    public AnimationFrameData CurrentAnimation;
+
     private void SyncState()
     {
         NPC.ai[0] = stateMachine.GetSerializedState();
@@ -48,6 +51,15 @@ public class HydrolysistBossBody : ModNPC
     {
         // Preserves original behavior: only fixes NaNs, does not normalize unless caller does
         return v.HasNaNs() ? new Vector2(fallbackDirX, 0f) : v;
+    }
+
+    private void DebugPrint(string msg)
+    {
+        CombatText.NewText(
+            new Rectangle((int)NPC.position.X, (int)NPC.position.Y, 100, 100),
+            Color.White,
+            msg
+        );
     }
 
     public override void SetStaticDefaults()
@@ -97,13 +109,17 @@ public class HydrolysistBossBody : ModNPC
     {
         var idleState = new IdleState();
         var transformationState = new TransformationState();
+        var lightningState = new LightningState();
 
         idleState.Transitions =
         [
             new Transition<HydrolysistContext>()
             {
-                To = transformationState,
-                Conditions = [new TransitionCondition { Predicate = () => Timer <= 0 }],
+                To = lightningState,
+                Conditions =
+                [
+                    new TransitionCondition { Predicate = () => Timer <= 0 && Phase == 0f },
+                ],
             },
         ];
         transformationState.Transitions =
@@ -114,8 +130,17 @@ public class HydrolysistBossBody : ModNPC
                 Conditions = [new TransitionCondition { Predicate = () => Timer <= 0f }],
             },
         ];
+        lightningState.Transitions =
+        [
+            new Transition<HydrolysistContext>()
+            {
+                To = idleState,
+                Conditions = [new TransitionCondition { Predicate = () => Phase >= 3f }],
+            },
+        ];
 
         stateMachine = new StateMachine<HydrolysistContext>([idleState, transformationState]);
+        CurrentAnimation = new AnimationFrameData(1, [0]);
     }
 
     public override bool CanHitPlayer(Player target, ref int cooldownSlot)
@@ -127,22 +152,15 @@ public class HydrolysistBossBody : ModNPC
 
     public override void FindFrame(int frameHeight)
     {
-        // This NPC animates with a simple "go from start frame to final frame, and loop back to start frame" rule
-        int startFrame = 3;
-        int finalFrame = 6;
-
-        int frameSpeed = 5;
         NPC.frameCounter += 0.5f;
-        if (NPC.frameCounter > frameSpeed)
+        int index = (int)(NPC.frameCounter / CurrentAnimation.frameRate);
+        if ((int)(NPC.frameCounter / CurrentAnimation.frameRate) >= CurrentAnimation.frames.Length)
         {
             NPC.frameCounter = 0;
-            NPC.frame.Y += frameHeight;
-
-            if (NPC.frame.Y > finalFrame * frameHeight)
-            {
-                NPC.frame.Y = startFrame * frameHeight;
-            }
         }
+        NPC.frame.Y =
+            CurrentAnimation.frames[(int)(NPC.frameCounter / CurrentAnimation.frameRate)]
+            * frameHeight;
     }
 
     public override void HitEffect(NPC.HitInfo hit)
@@ -251,25 +269,21 @@ public class HydrolysistBossBody : ModNPC
         public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
         {
             context.Boss.Timer = DECISION_TIME;
+            context.Boss.Phase = 0f;
         }
 
         public void Exit(IState<HydrolysistContext> to, HydrolysistContext context)
         {
-            CombatText.NewText(
-                new Rectangle(
-                    (int)context.Boss.NPC.position.X,
-                    (int)context.Boss.NPC.position.Y,
-                    100,
-                    100
-                ),
-                Color.White,
-                $"Transitioning to Poop"
-            );
+            context.Boss.DebugPrint($"Transitioning to {to.GetType().Name}");
         }
 
         public void Tick(HydrolysistContext context)
         {
             context.Boss.Timer -= 1f;
+            if (Main.netMode == NetmodeID.MultiplayerClient || context.Boss.Timer != 0f)
+                return;
+            context.Boss.Phase = Random.Shared.Next(0, 0);
+            context.Boss.NPC.netUpdate = true;
         }
     }
 
@@ -285,21 +299,95 @@ public class HydrolysistBossBody : ModNPC
 
         public void Exit(IState<HydrolysistContext> to, HydrolysistContext context)
         {
-            CombatText.NewText(
-                new Rectangle(
-                    (int)context.Boss.NPC.position.X,
-                    (int)context.Boss.NPC.position.Y,
-                    100,
-                    100
-                ),
-                Color.White,
-                $"Transitioning to {to.GetType().Name}"
-            );
+            context.Boss.NPC.Opacity = 1f;
         }
 
         public void Tick(HydrolysistContext context)
         {
+            context.Boss.NPC.Opacity = Math.Min(context.Boss.NPC.Opacity + 0.01f, 1f);
             context.Boss.Timer -= 1f;
+        }
+    }
+
+    private class LightningState : IState<HydrolysistContext>
+    {
+        private const float CHARGE_TIME = 120f;
+        private const float ATTACK_TIME = 300f;
+        private const float RECOVER_TIME = 60f;
+        private static readonly AnimationFrameData chargeAnimation = new(10, [13, 14, 15]);
+        private static readonly AnimationFrameData fireAnimation = new(10, [10, 11, 12]);
+        private static readonly AnimationFrameData recoverAnimation = new(10, [3, 4, 5, 6]);
+        public List<Transition<HydrolysistContext>> Transitions { get; set; }
+
+        public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
+        {
+            context.Boss.Timer = -1f;
+            context.Boss.Phase = 0f;
+        }
+
+        public void Exit(IState<HydrolysistContext> to, HydrolysistContext context) { }
+
+        public void Tick(HydrolysistContext context)
+        {
+            switch (context.Boss.Phase)
+            {
+                case 0:
+                    if (context.Boss.Timer <= 0)
+                    {
+                        context.Boss.Timer = CHARGE_TIME;
+                        context.Boss.DebugPrint("Entering Charging Phase");
+                    }
+                    ChargeLightning(context);
+                    break;
+                case 1:
+                    if (context.Boss.Timer <= 0)
+                    {
+                        context.Boss.Timer = ATTACK_TIME;
+                        context.Boss.DebugPrint("Entering Firing Phase");
+                    }
+                    FireLightning(context);
+                    break;
+                case 2:
+                    if (context.Boss.Timer <= 0)
+                    {
+                        context.Boss.Timer = RECOVER_TIME;
+                        context.Boss.DebugPrint("Entering Recovery Phase");
+                    }
+                    Recover(context);
+                    break;
+            }
+            context.Boss.Timer -= 1f;
+            if (context.Boss.Timer <= 0)
+            {
+                context.Boss.Phase++;
+            }
+        }
+
+        private static void ChargeLightning(HydrolysistContext context)
+        {
+            context.Boss.CurrentAnimation = chargeAnimation;
+        }
+
+        private static void FireLightning(HydrolysistContext context)
+        {
+            context.Boss.CurrentAnimation = fireAnimation;
+            if (context.Boss.NPC.HasValidTarget && Main.npc[context.Boss.NPC.target].active)
+            {
+                FaceHorizontallyTowards(
+                    context.Boss.NPC,
+                    Main.npc[context.Boss.NPC.target].position
+                );
+            }
+            if (Main.netMode == NetmodeID.MultiplayerClient)
+                return;
+            context.Boss.NPC.TargetClosest();
+            if (!context.Boss.NPC.HasValidTarget)
+                return;
+        }
+
+        private static void Recover(HydrolysistContext context)
+        {
+            context.Boss.CurrentAnimation = recoverAnimation;
         }
     }
 
