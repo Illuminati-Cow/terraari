@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Terraari.Common.StateMachine;
 using Terraari.Common.Systems;
+using terraari.Content.Projectiles;
 using Terraria;
 using Terraria.DataStructures;
 using Terraria.GameContent.ItemDropRules;
@@ -378,11 +379,32 @@ public class HydrolysistBossBody : ModNPC
                     Main.npc[context.Boss.NPC.target].position
                 );
             }
+            if (context.Boss.Timer % 20 != 0)
+                return;
             if (Main.netMode == NetmodeID.MultiplayerClient)
                 return;
-            context.Boss.NPC.TargetClosest();
+            if (!context.Boss.NPC.HasValidTarget)
+                context.Boss.NPC.TargetClosest();
             if (!context.Boss.NPC.HasValidTarget)
                 return;
+            var directionToPlayer = SafeVector(
+                Main.npc[context.Boss.NPC.target].position - context.Boss.NPC.position,
+                1
+            );
+            directionToPlayer.Normalize();
+            Projectile.NewProjectileDirect(
+                context.Boss.NPC.GetSource_FromAI(),
+                context.Boss.NPC.position,
+                directionToPlayer,
+                ModContent.ProjectileType<ShimmerLightning>(),
+                10,
+                10,
+                Main.myPlayer,
+                (
+                    Vector2.Normalize(directionToPlayer.RotatedByRandom(0.7853981852531433)) * 7f
+                ).ToRotation(),
+                Main.rand.Next(100)
+            );
         }
 
         private static void Recover(HydrolysistContext context)

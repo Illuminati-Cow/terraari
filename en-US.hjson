@@ -38,6 +38,7 @@ Mods: {
 			Bubble.DisplayName: Bubble
 			BigBubble.DisplayName: Big Bubble
 			SmallBubble.DisplayName: Small Bubble
+			ShimmerLightning.DisplayName: Shimmer Lightning
 		}
 	}
 }
