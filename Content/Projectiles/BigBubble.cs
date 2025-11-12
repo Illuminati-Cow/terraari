@@ -1,10 +1,11 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using ReLogic.Content;
 using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
 
-namespace terraari.Content.Projectiles
+namespace Terraari.Content.Projectiles
 {
     public class BigBubble : ModProjectile
     {
@@ -20,7 +21,7 @@ namespace terraari.Content.Projectiles
             bubbleEffect = ModContent
                 .Request<Effect>(
                     "terraari/Assets/Effects/BubbleWarp",
-                    ReLogic.Content.AssetRequestMode.ImmediateLoad
+                    AssetRequestMode.ImmediateLoad
                 )
                 .Value;
         }

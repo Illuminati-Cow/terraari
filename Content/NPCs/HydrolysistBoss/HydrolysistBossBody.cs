@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Terraari.Common.StateMachine;
 using Terraari.Common.Systems;
-using terraari.Content.Projectiles;
+using Terraari.Content.Projectiles;
 using Terraria;
 using Terraria.DataStructures;
 using Terraria.GameContent.ItemDropRules;

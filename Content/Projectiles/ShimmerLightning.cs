@@ -4,7 +4,7 @@ using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
 
-namespace terraari.Content.Projectiles;
+namespace Terraari.Content.Projectiles;
 
 public class ShimmerLightning : ModProjectile
 {

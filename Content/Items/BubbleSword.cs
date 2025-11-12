@@ -1,10 +1,9 @@
-using Microsoft.Xna.Framework;
-using terraari.Content.Projectiles;
+using Terraari.Content.Projectiles;
 using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
 
-namespace terraari.Content.Items
+namespace Terraari.Content.Items
 {
     public class BubbleSword : ModItem
     {
