@@ -388,7 +388,7 @@ public class HydrolysistBossBody : ModNPC
             if (!context.Boss.NPC.HasValidTarget)
                 return;
             Vector2 directionToPlayer = SafeVector(
-                Main.npc[context.Boss.NPC.target].position - context.Boss.NPC.position,
+                Main.player[context.Boss.NPC.target].position - context.Boss.NPC.position,
                 1
             );
             directionToPlayer.Normalize();
