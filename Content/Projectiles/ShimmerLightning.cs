@@ -17,6 +17,129 @@ public class ShimmerLightning : ModProjectile
         set => Projectile.ai[2] = value;
     }
 
+    // Configuration constants – adjust to tune lightning behavior
+    private const int MaxDirectionAttempts = 100; // Attempts before giving up and stopping
+    private const float MinVerticalComponent = -0.02f; // Require Y <= this (mostly upward)
+    private const float MaxLateralDisplacement = 40f; // Horizontal extent clamp
+
+    // Derived segment tick length (how long before changing direction)
+    private int SegmentTicks => Projectile.extraUpdates * 2;
+
+    private bool IsSegmentReady => Timer >= SegmentTicks;
+
+    private int seed = -1;
+    private float xVelocityOffset;
+    private bool FailedToBranch;
+
+    private float InitialDirection => Projectile.ai[0];
+
+    private void SpawnCoreDust()
+    {
+        var d = Dust.NewDustPerfect(
+            Projectile.Center,
+            DustID.ShimmerSpark,
+            Vector2.Zero,
+            0,
+            default,
+            1.5f
+        );
+        d.noGravity = true;
+        Lighting.AddLight(Projectile.Center, 1f, 1f, 1f);
+    }
+
+    private bool ShouldKillIfStationary()
+    {
+        if (!IsSegmentReady)
+            return false;
+        Timer = 0;
+        for (int i = 1; i < Projectile.oldPos.Length; i++)
+        {
+            if (Projectile.oldPos[i] != Projectile.oldPos[0])
+                return false; // Has moved previously – keep alive
+        }
+        return true;
+    }
+
+    private void SpawnIdleDust()
+    {
+        if (Main.rand.Next(Projectile.extraUpdates) != 0)
+            return;
+        for (int i = 0; i < 2; i++)
+        {
+            float dustDirection =
+                Projectile.rotation + (Main.rand.NextBool() ? -1f : 1f) * MathF.PI / 2f;
+            float dustSpeed = (float)Main.rand.NextDouble() * 0.8f + 1f;
+            Vector2 vel = new(
+                MathF.Cos(dustDirection) * dustSpeed,
+                MathF.Sin(dustDirection) * dustSpeed
+            );
+            var dust = Dust.NewDustDirect(
+                Projectile.Center,
+                10,
+                10,
+                DustID.ShimmerSpark,
+                vel.X,
+                vel.Y
+            );
+            dust.noGravity = true;
+            dust.scale = 1.2f;
+        }
+    }
+
+    private void SpawnIdleSmoke()
+    {
+        if (Main.rand.NextBool(5))
+            return;
+        Vector2 spawnDirection =
+            Projectile.velocity.RotatedBy(MathF.PI / 2f)
+            * ((float)Main.rand.NextDouble() - 0.5f)
+            * Projectile.width;
+        var smoke = Dust.NewDustDirect(
+            Projectile.Center + spawnDirection - Vector2.One * 4f,
+            8,
+            8,
+            DustID.Smoke,
+            0f,
+            0f,
+            100,
+            default,
+            1.5f
+        );
+        smoke.velocity *= 0.5f;
+        smoke.velocity.Y = -Math.Abs(smoke.velocity.Y);
+    }
+
+    private bool TryChooseNextDirection(float speed, out Vector2 chosen)
+    {
+        chosen = -Vector2.UnitY;
+        var rng = new UnifiedRandom(seed);
+        for (int attempt = 0; attempt < MaxDirectionAttempts; attempt++)
+        {
+            int random = rng.Next();
+            seed = random;
+            float angle = (random % 100) / 100f * MathF.Tau;
+            Vector2 candidate = angle.ToRotationVector2();
+            if (candidate.Y > 0f)
+                candidate.Y *= -1f; // Force upward tendency
+            float projectedLateral =
+                candidate.X * (Projectile.extraUpdates + 1) * 2f * speed + xVelocityOffset;
+            if (
+                candidate.Y <= MinVerticalComponent
+                && projectedLateral is > -MaxLateralDisplacement and < MaxLateralDisplacement
+            )
+            {
+                chosen = candidate;
+                Projectile.netUpdate = true;
+                return true;
+            }
+        }
+        // Failed – stop movement
+        Projectile.velocity = Vector2.Zero;
+        FailedToBranch = true;
+        Projectile.netUpdate = true;
+        return false;
+    }
+
     public override void SetStaticDefaults()
     {
         ProjectileID.Sets.TrailingMode[Projectile.type] = 0;
@@ -37,161 +160,41 @@ public class ShimmerLightning : ModProjectile
         Projectile.penetrate = 1;
     }
 
-    /// <summary>
-    /// Gets called when your projectiles spawns in world.
-    /// <para /> Called on the client or server spawning the projectile via Projectile.NewProjectile.
-    /// </summary>
     public override void OnSpawn(IEntitySource source)
     {
         Timer = 0;
-        Projectile.localAI[1] = 0f;
     }
 
     public override void AI()
     {
+        if (seed == -1)
+            seed = (int)Projectile.ai[1];
         Timer++;
         if (Timer % 2 == 0)
-        {
-            Color[] colors = [new Color(1, 1, 1)];
-            var color = new Color(1, 1, 1);
-            var debugDust = Dust.NewDustPerfect(
-                Projectile.Center,
-                DustID.Electric,
-                Vector2.Zero,
-                0,
-                default,
-                1.5f
-            );
-            debugDust.noGravity = true;
-            Lighting.AddLight(Projectile.Center, 0.3f, 0.45f, 0.5f);
-        }
-        // What is this check for?
+            SpawnCoreDust();
+
         if (Projectile.velocity == Vector2.Zero)
         {
-            if (Timer >= Projectile.extraUpdates * 2)
+            if (ShouldKillIfStationary())
             {
-                Timer = 0;
-                bool shouldKill = true;
-                for (int i = 1; i < Projectile.oldPos.Length; i++)
-                {
-                    // If velocity is zero, and we have moved in the past, then don't kill the projectile
-                    if (Projectile.oldPos[i] != Projectile.oldPos[0])
-                    {
-                        shouldKill = false;
-                    }
-                }
-
-                if (shouldKill)
-                {
-                    Projectile.Kill();
-                    Main.NewText("Killing Projectile");
-                    return;
-                }
-            }
-
-            // Spawn lightning dust along the path, with a guarantee to spawn it at the end
-            if (Main.rand.Next(Projectile.extraUpdates) != 0)
+                Projectile.Kill();
                 return;
-            Main.NewText("Spawning Dust");
-            for (int i = 0; i < 2; i++)
-            {
-                float dustDirection =
-                    Projectile.rotation
-                    + (Main.rand.NextBool(2) ? -1f : 1f) * ((float)Math.PI / 2f);
-                float dustSpeed = (float)Main.rand.NextDouble() * 0.8f + 1f;
-                var dustVelocity = new Vector2(
-                    (float)Math.Cos(dustDirection) * dustSpeed,
-                    (float)Math.Sin(dustDirection) * dustSpeed
-                );
-                var dust = Dust.NewDustDirect(
-                    Projectile.Center,
-                    10,
-                    10,
-                    DustID.Electric,
-                    dustVelocity.X,
-                    dustVelocity.Y
-                );
-                dust.noGravity = true;
-                dust.scale = 1.2f;
             }
-
-            // Spawn smoke particles with a fixed chance
-            if (Main.rand.NextBool(5))
-                return;
-
-            Vector2 spawnDirection =
-                Projectile.velocity.RotatedBy(1.5707963705062866)
-                * ((float)Main.rand.NextDouble() - 0.5f)
-                * Projectile.width;
-            var smokeDust = Dust.NewDustDirect(
-                Projectile.Center + spawnDirection - Vector2.One * 4f,
-                8,
-                8,
-                DustID.Smoke,
-                0f,
-                0f,
-                100,
-                default(Color),
-                1.5f
-            );
-            smokeDust.velocity *= 0.5f;
-            smokeDust.velocity.Y = 0f - Math.Abs(smokeDust.velocity.Y);
+            SpawnIdleDust();
+            SpawnIdleSmoke();
+            return;
         }
-        else
-        {
-            if (Timer < Projectile.extraUpdates * 2)
-            {
-                return;
-            }
-            Timer = 0;
-            float speed = Projectile.velocity.Length();
-            var unifiedRandom = new UnifiedRandom((int)Projectile.ai[1]);
-            int step = 0;
-            Vector2 direction = -Vector2.UnitY;
-            while (true)
-            {
-                int random = unifiedRandom.Next();
-                Projectile.ai[1] = random;
-                random %= 100;
-                float randomAngle = random / 100f * ((float)Math.PI * 2f);
-                Vector2 rotation = randomAngle.ToRotationVector2();
-                // Flip vertical direction
-                if (rotation.Y > 0f)
-                {
-                    rotation.Y *= -1f;
-                }
 
-                if (
-                    rotation.Y > -0.02f
-                    || rotation.X * (Projectile.extraUpdates + 1) * 2f * speed
-                        + Projectile.localAI[0]
-                        > 40f
-                    || rotation.X * (Projectile.extraUpdates + 1) * 2f * speed
-                        + Projectile.localAI[0]
-                        < -40f
-                )
-                {
-                    if (step++ >= 100)
-                    {
-                        Projectile.velocity = Vector2.Zero;
-                        Projectile.localAI[1] = 1f;
-                        break;
-                    }
-                    continue;
-                }
-                direction = rotation;
-                break;
-            }
+        if (!IsSegmentReady)
+            return;
 
-            if (Projectile.velocity == Vector2.Zero)
-                return;
-            // If somehow velocity is not zero (loop-end state), then set the velocity
-            Projectile.localAI[0] +=
-                direction.X * (float)(Projectile.extraUpdates + 1) * 2f * speed;
-            Projectile.velocity =
-                direction.RotatedBy(Projectile.ai[0] + (float)Math.PI / 2f) * speed;
-            Projectile.rotation = Projectile.velocity.ToRotation() + (float)Math.PI / 2f;
-        }
+        Timer = 0;
+        float speed = Projectile.velocity.Length();
+        if (!TryChooseNextDirection(speed, out Vector2 dir) || Projectile.velocity == Vector2.Zero)
+            return;
+        xVelocityOffset += dir.X * (Projectile.extraUpdates + 1) * 2f * speed;
+        Projectile.velocity = dir.RotatedBy(InitialDirection + MathF.PI / 2f) * speed;
+        Projectile.rotation = Projectile.velocity.ToRotation() + MathF.PI / 2f;
     }
 
     public override bool? Colliding(Rectangle projHitbox, Rectangle targetHitbox)
@@ -220,9 +223,9 @@ public class ShimmerLightning : ModProjectile
     /// <param name="oldVelocity">The velocity of the projectile upon collision.</param>
     public override bool OnTileCollide(Vector2 oldVelocity)
     {
-        if (!(Projectile.localAI[1] < 1f))
+        // Despawn the projectile on tile collision only if it failed to branch
+        if (FailedToBranch)
             return true;
-        Projectile.localAI[1] += 2f;
         Projectile.position += Projectile.velocity;
         Projectile.velocity = Vector2.Zero;
 
@@ -243,7 +246,7 @@ public class ShimmerLightning : ModProjectile
             Projectile.oldPos[^1],
             0,
             0,
-            DustID.Vortex,
+            DustID.ShimmerSplash,
             velocity.X,
             velocity.Y
         );
