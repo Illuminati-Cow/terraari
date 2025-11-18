@@ -387,22 +387,23 @@ public class HydrolysistBossBody : ModNPC
                 context.Boss.NPC.TargetClosest();
             if (!context.Boss.NPC.HasValidTarget)
                 return;
-            var directionToPlayer = SafeVector(
+            Vector2 directionToPlayer = SafeVector(
                 Main.npc[context.Boss.NPC.target].position - context.Boss.NPC.position,
                 1
             );
             directionToPlayer.Normalize();
+            float spawnAngle = (
+                Vector2.Normalize(directionToPlayer.RotatedByRandom(Math.PI / 4)) * 7f
+            ).ToRotation();
             Projectile.NewProjectileDirect(
                 context.Boss.NPC.GetSource_FromAI(),
-                context.Boss.NPC.position,
+                context.Boss.NPC.Center,
                 directionToPlayer,
                 ModContent.ProjectileType<ShimmerLightning>(),
                 10,
                 10,
                 Main.myPlayer,
-                (
-                    Vector2.Normalize(directionToPlayer.RotatedByRandom(0.7853981852531433)) * 7f
-                ).ToRotation(),
+                spawnAngle,
                 Main.rand.Next(100)
             );
         }
