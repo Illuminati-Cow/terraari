@@ -256,7 +256,6 @@ public class ShimmerLightning : ModProjectile
 
     public override void OnKill(int timeLeft)
     {
-        Main.NewText($"Time Left: {timeLeft}");
         if (timeLeft != 0)
             return;
         for (int i = 0; i < 4; i++)
