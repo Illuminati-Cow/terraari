@@ -111,6 +111,7 @@ public class HydrolysistBossBody : ModNPC
         var idleState = new IdleState();
         var transformationState = new TransformationState();
         var lightningState = new LightningState();
+        var bubbleSwarmState = new BubbleSwarmState();
 
         idleState.Transitions =
         [
@@ -120,6 +121,14 @@ public class HydrolysistBossBody : ModNPC
                 Conditions =
                 [
                     new TransitionCondition { Predicate = () => Timer <= 0 && Phase == 0f },
+                ],
+            },
+            new Transition<HydrolysistContext>()
+            {
+                To = bubbleSwarmState,
+                Conditions =
+                [
+                    new TransitionCondition { Predicate = () => Timer <= 0 && Phase == 1f },
                 ],
             },
         ];
@@ -137,6 +146,14 @@ public class HydrolysistBossBody : ModNPC
             {
                 To = idleState,
                 Conditions = [new TransitionCondition { Predicate = () => Phase >= 3f }],
+            },
+        ];
+        bubbleSwarmState.Transitions =
+        [
+            new Transition<HydrolysistContext>()
+            {
+                To = idleState,
+                Conditions = [new TransitionCondition { Predicate = () => Phase >= 2f }],
             },
         ];
 
@@ -265,6 +282,7 @@ public class HydrolysistBossBody : ModNPC
     private class IdleState : IState<HydrolysistContext>
     {
         private const float DECISION_TIME = 60f;
+        private int phaseTracker = 0;
         public List<Transition<HydrolysistContext>> Transitions { get; set; } = [];
 
         public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
@@ -283,30 +301,41 @@ public class HydrolysistBossBody : ModNPC
             context.Boss.Timer -= 1f;
             if (Main.netMode == NetmodeID.MultiplayerClient || context.Boss.Timer != 0f)
                 return;
-            context.Boss.Phase = Random.Shared.Next(0, 0);
+            context.Boss.Phase = ++phaseTracker % 2;
             context.Boss.NPC.netUpdate = true;
         }
     }
 
     private class TransformationState : IState<HydrolysistContext>
     {
-        private const float TRANSFORMATION_TIME = 60f;
+        private const float TRANSFORMATION_TIME = 100f;
         public List<Transition<HydrolysistContext>> Transitions { get; set; } = [];
 
         public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
         {
             context.Boss.Timer = TRANSFORMATION_TIME;
+            context.Boss.Phase = 0f;
+            context.Boss.NPC.velocity.Y = -10f;
+            context.Boss.NPC.dontTakeDamage = true;
+            context.Boss.NPC.netUpdate = true;
         }
 
         public void Exit(IState<HydrolysistContext> to, HydrolysistContext context)
         {
             context.Boss.NPC.Opacity = 1f;
+            context.Boss.NPC.velocity.Y = 0f;
+            context.Boss.NPC.dontTakeDamage = false;
+            context.Boss.NPC.netUpdate = true;
         }
 
         public void Tick(HydrolysistContext context)
         {
-            context.Boss.NPC.Opacity = Math.Min(context.Boss.NPC.Opacity + 0.01f, 1f);
+            context.Boss.NPC.Opacity = Math.Min(
+                context.Boss.NPC.Opacity + 1 / TRANSFORMATION_TIME,
+                1f
+            );
             context.Boss.Timer -= 1f;
+            context.Boss.NPC.position -= context.Boss.NPC.velocity * 16f;
         }
     }
 
@@ -315,6 +344,7 @@ public class HydrolysistBossBody : ModNPC
         private const float CHARGE_TIME = 120f;
         private const float ATTACK_TIME = 300f;
         private const float RECOVER_TIME = 60f;
+        private const int FIRE_INTERVAL = 15;
         private static readonly AnimationFrameData chargeAnimation = new(10, [13, 14, 15]);
         private static readonly AnimationFrameData fireAnimation = new(10, [10, 11, 12]);
         private static readonly AnimationFrameData recoverAnimation = new(10, [3, 4, 5, 6]);
@@ -372,14 +402,14 @@ public class HydrolysistBossBody : ModNPC
         private static void FireLightning(HydrolysistContext context)
         {
             context.Boss.CurrentAnimation = fireAnimation;
-            if (context.Boss.NPC.HasValidTarget && Main.npc[context.Boss.NPC.target].active)
+            if (context.Boss.NPC.HasValidTarget)
             {
                 FaceHorizontallyTowards(
                     context.Boss.NPC,
-                    Main.npc[context.Boss.NPC.target].position
+                    Main.player[context.Boss.NPC.target].Center
                 );
             }
-            if (context.Boss.Timer % 20 != 0)
+            if (context.Boss.Timer % FIRE_INTERVAL != 0)
                 return;
             if (Main.netMode == NetmodeID.MultiplayerClient)
                 return;
@@ -398,7 +428,7 @@ public class HydrolysistBossBody : ModNPC
             Projectile.NewProjectileDirect(
                 context.Boss.NPC.GetSource_FromAI(),
                 context.Boss.NPC.Center,
-                directionToPlayer,
+                directionToPlayer * 2f,
                 ModContent.ProjectileType<ShimmerLightning>(),
                 10,
                 10,
@@ -411,6 +441,102 @@ public class HydrolysistBossBody : ModNPC
         private static void Recover(HydrolysistContext context)
         {
             context.Boss.CurrentAnimation = recoverAnimation;
+        }
+    }
+
+    private class BubbleSwarmState : IState<HydrolysistContext>
+    {
+        private const float CHARGE_TIME = 120f;
+        private const float ATTACK_TIME = 300f;
+        private const int FIRE_INTERVAL = 5;
+        private const float BUBBLE_SPEED = 20f;
+        private static readonly AnimationFrameData chargeAnimation = new(10, [13, 14, 15]);
+        private static readonly AnimationFrameData fireAnimation = new(10, [10, 11, 12]);
+
+        public List<Transition<HydrolysistContext>> Transitions { get; set; }
+
+        public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
+        {
+            context.Boss.Timer = -1f;
+            context.Boss.Phase = 0f;
+        }
+
+        public void Exit(IState<HydrolysistContext> to, HydrolysistContext context) { }
+
+        public void Tick(HydrolysistContext context)
+        {
+            switch (context.Boss.Phase)
+            {
+                case 0:
+                    if (context.Boss.Timer <= 0)
+                    {
+                        context.Boss.Timer = CHARGE_TIME;
+                        context.Boss.DebugPrint("Entering Charging Phase");
+                    }
+                    ChargeBubbleSwarm(context);
+                    break;
+                case 1:
+                    if (context.Boss.Timer <= 0)
+                    {
+                        context.Boss.Timer = ATTACK_TIME;
+                        context.Boss.DebugPrint("Entering Firing Phase");
+                    }
+                    FireBubbleSwarm(context);
+                    break;
+            }
+            context.Boss.Timer -= 1f;
+            if (context.Boss.Timer <= 0)
+            {
+                context.Boss.Phase++;
+            }
+        }
+
+        private static void ChargeBubbleSwarm(HydrolysistContext context)
+        {
+            context.Boss.CurrentAnimation = chargeAnimation;
+            if (context.Boss.NPC.HasValidTarget)
+            {
+                FaceHorizontallyTowards(
+                    context.Boss.NPC,
+                    Main.player[context.Boss.NPC.target].Center
+                );
+            }
+        }
+
+        private static void FireBubbleSwarm(HydrolysistContext context)
+        {
+            context.Boss.CurrentAnimation = fireAnimation;
+            if (context.Boss.NPC.HasValidTarget)
+            {
+                FaceHorizontallyTowards(
+                    context.Boss.NPC,
+                    Main.player[context.Boss.NPC.target].Center
+                );
+            }
+
+            if (Main.netMode == NetmodeID.MultiplayerClient)
+                return;
+            if (!context.Boss.NPC.HasValidTarget)
+                context.Boss.NPC.TargetClosest();
+            if (!context.Boss.NPC.HasValidTarget)
+                return;
+            if (context.Boss.Timer % FIRE_INTERVAL != 0)
+                return;
+            Vector2 directionToPlayer = SafeVector(
+                Main.player[context.Boss.NPC.target].position - context.Boss.NPC.position,
+                1
+            );
+            Vector2 velocity = directionToPlayer.RotatedByRandom(Math.PI / 4);
+            velocity = velocity.SafeNormalize(Vector2.UnitX) * BUBBLE_SPEED;
+            Projectile.NewProjectileDirect(
+                context.Boss.NPC.GetSource_FromAI(),
+                context.Boss.NPC.Center,
+                velocity,
+                ModContent.ProjectileType<SmallBubble>(),
+                10,
+                10,
+                Main.myPlayer
+            );
         }
     }
 

@@ -156,7 +156,7 @@ public class ShimmerLightning : ModProjectile
         Projectile.ignoreWater = true;
         Projectile.tileCollide = true;
         Projectile.extraUpdates = 4;
-        Projectile.timeLeft = 120 * (Projectile.extraUpdates + 1);
+        Projectile.timeLeft = 240 * (Projectile.extraUpdates + 1);
         Projectile.penetrate = 1;
     }
 
