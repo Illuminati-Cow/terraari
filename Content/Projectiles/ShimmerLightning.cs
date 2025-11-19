@@ -60,9 +60,9 @@ public class ShimmerLightning : ModProjectile
         return true;
     }
 
-    private void SpawnIdleDust()
+    private void SpawnCollisionSparks(bool forceSpawn = false)
     {
-        if (Main.rand.Next(Projectile.extraUpdates) != 0)
+        if (Main.rand.Next(Projectile.extraUpdates) != 0 && !forceSpawn)
             return;
         for (int i = 0; i < 2; i++)
         {
@@ -86,7 +86,7 @@ public class ShimmerLightning : ModProjectile
         }
     }
 
-    private void SpawnIdleSmoke()
+    private void SpawnCollisionSmoke()
     {
         if (Main.rand.NextBool(5))
             return;
@@ -180,8 +180,8 @@ public class ShimmerLightning : ModProjectile
                 Projectile.Kill();
                 return;
             }
-            SpawnIdleDust();
-            SpawnIdleSmoke();
+            SpawnCollisionSparks();
+            SpawnCollisionSmoke();
             return;
         }
 
@@ -254,5 +254,14 @@ public class ShimmerLightning : ModProjectile
         dust.scale = 1.7f;
     }
 
-    public override void OnKill(int timeLeft) { }
+    public override void OnKill(int timeLeft)
+    {
+        Main.NewText($"Time Left: {timeLeft}");
+        if (timeLeft != 0)
+            return;
+        for (int i = 0; i < 4; i++)
+        {
+            SpawnCollisionSparks(true);
+        }
+    }
 }
