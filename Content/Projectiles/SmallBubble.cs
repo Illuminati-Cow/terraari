@@ -91,7 +91,6 @@ public class SmallBubble : ModProjectile
         // Randomly variate in velocity
         if (Random.Shared.NextSingle() < 0.1f)
         {
-            Projectile.scale += 0.003f; // Slowly increase in size
             Projectile.velocity +=
                 new Vector2(Random.Shared.NextSingle() - .5f, Random.Shared.NextSingle() - .5f)
                 * 3f;
