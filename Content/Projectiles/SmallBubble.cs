@@ -25,14 +25,13 @@ public class SmallBubble : ModProjectile
         [3] = Color.LightGoldenrodYellow,
         [4] = Color.LightPink,
         [5] = Color.LightPink,
-        [6] = Color.LightSalmon
+        [6] = Color.LightSalmon,
     };
 
     public override void SetStaticDefaults()
     {
         base.SetStaticDefaults();
     }
-
 
     public override void SetDefaults()
     {
@@ -63,7 +62,7 @@ public class SmallBubble : ModProjectile
             Projectile.velocity = Projectile.oldVelocity;
             Projectile.velocity.Y = -Math.Abs(Projectile.velocity.Y);
         }
-        else if (Projectile.wet) 
+        else if (Projectile.wet)
         {
             // Destroy bubbles in all other fluids
             Projectile.Kill();
@@ -78,7 +77,9 @@ public class SmallBubble : ModProjectile
                     Position: Projectile.Center + Projectile.Size / 2,
                     Type: DustID.ShimmerSpark,
                     Velocity: Vector2.Zero,
-                    newColor: DustColors[(int)Math.Floor(Random.Shared.NextSingle() * DustColors.Count) + 1],
+                    newColor: DustColors[
+                        (int)Math.Floor(Random.Shared.NextSingle() * DustColors.Count) + 1
+                    ],
                     Scale: scale
                 );
                 dust.velocity = Projectile.velocity / 4f;
@@ -91,7 +92,9 @@ public class SmallBubble : ModProjectile
         if (Random.Shared.NextSingle() < 0.1f)
         {
             Projectile.scale += 0.003f; // Slowly increase in size
-            Projectile.velocity += new Vector2(Random.Shared.NextSingle()-.5f, Random.Shared.NextSingle()-.5f)*3f;
+            Projectile.velocity +=
+                new Vector2(Random.Shared.NextSingle() - .5f, Random.Shared.NextSingle() - .5f)
+                * 3f;
         }
         Projectile.velocity *= 0.995f; // Slowly drop in velocity
         Projectile.alpha = Math.Max(GOAL_ALPHA, Projectile.alpha - 15);
@@ -113,7 +116,9 @@ public class SmallBubble : ModProjectile
                     Position: Projectile.Center + Projectile.Size / 2,
                     Type: DustID.ShimmerSpark,
                     Velocity: velocity,
-                    newColor: DustColors[(int)Math.Floor(Random.Shared.NextSingle() * DustColors.Count) + 1],
+                    newColor: DustColors[
+                        (int)Math.Floor(Random.Shared.NextSingle() * DustColors.Count) + 1
+                    ],
                     Scale: scale
                 );
                 dust.position += velocity * Projectile.Size.Length() / 2;
