@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Terraria;
+using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
 
@@ -33,8 +35,8 @@ public class SmallBubble : ModProjectile
     {
         Projectile.DamageType = DamageClass.Magic; // Damage class projectile uses
         Projectile.penetrate = 1; // How many hits projectile have to make before it dies. 3 means projectile will die on 3rd enemy. Setting this to 0 will make projectile die instantly
-        Projectile.width = Projectile.height = 30; // Size of the projectile in pixels.
-        Projectile.scale = 1.5f;
+        Projectile.width = Projectile.height = 30; // Size of the projectile in pixels (hitbox only).
+        Projectile.scale = 1f; // Keep logical scale at 1; visual 3x handled in PreDraw.
         Projectile.friendly = false; // Can hit enemies?
         Projectile.hostile = true; // Can hit player?
         Projectile.timeLeft = 200; // Time in ticks before projectile dies
@@ -87,6 +89,7 @@ public class SmallBubble : ModProjectile
         // Randomly variate in velocity
         if (Random.Shared.NextSingle() < 0.1f)
         {
+            Projectile.scale += 0.003f; // Slowly increase logical scale (will be multiplied when drawing)
             Projectile.velocity +=
                 new Vector2(Random.Shared.NextSingle() - .5f, Random.Shared.NextSingle() - .5f)
                 * 3f;
@@ -120,5 +123,54 @@ public class SmallBubble : ModProjectile
                 dust.noGravity = true;
             }
         }
+    }
+
+    public override bool PreDraw(ref Color lightColor)
+    {
+        // Ensure projectile texture is loaded
+        Main.instance.LoadProjectile(Projectile.type);
+
+        Texture2D texture = TextureAssets.Projectile[Projectile.type].Value;
+        Rectangle frame = texture.Bounds; // Single frame (not animated)
+        Vector2 origin = frame.Size() / 2f;
+        Vector2 drawPos = Projectile.Center - Main.screenPosition;
+
+        // Visual scale multiplier of 3 applied on top of logical scale growth.
+        float visualScale = Projectile.scale * 3f;
+
+        // Draw base sprite centered.
+        Main.EntitySpriteDraw(
+            texture,
+            drawPos,
+            frame,
+            lightColor * ((255 - Projectile.alpha) / 255f),
+            Projectile.rotation,
+            origin,
+            visualScale,
+            SpriteEffects.None,
+            0
+        );
+
+        // Draw glow texture (if available) with same scaling, using alpha factor.
+        if (!string.IsNullOrEmpty(GlowTexture))
+        {
+            var glowTex = ModContent.Request<Texture2D>(GlowTexture).Value;
+            Rectangle glowFrame = glowTex.Bounds;
+            Vector2 glowOrigin = glowFrame.Size() / 2f;
+            Main.EntitySpriteDraw(
+                glowTex,
+                drawPos,
+                glowFrame,
+                Color.White * ((255 - Projectile.alpha) / 255f),
+                Projectile.rotation,
+                glowOrigin,
+                visualScale,
+                SpriteEffects.None,
+                0
+            );
+        }
+
+        // We've manually drawn; skip default drawing.
+        return false;
     }
 }
