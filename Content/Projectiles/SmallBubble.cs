@@ -1,13 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Security.Principal;
 using Microsoft.Xna.Framework;
 using Terraria;
-using Terraria.Chat;
-using Terraria.Graphics.Renderers;
 using Terraria.ID;
 using Terraria.ModLoader;
-using Terraria.UI.Chat;
 
 namespace Terraari.Content.Projectiles;
 
@@ -37,12 +33,12 @@ public class SmallBubble : ModProjectile
     {
         Projectile.DamageType = DamageClass.Magic; // Damage class projectile uses
         Projectile.penetrate = 1; // How many hits projectile have to make before it dies. 3 means projectile will die on 3rd enemy. Setting this to 0 will make projectile die instantly
-        Projectile.width = Projectile.height = 1; // Size of the projectile in pixels.
-        Projectile.scale = (Random.Shared.NextSingle() * 0.7f) + 2.5f;
+        Projectile.width = Projectile.height = 30; // Size of the projectile in pixels.
+        Projectile.scale = 1.5f;
         Projectile.friendly = false; // Can hit enemies?
         Projectile.hostile = true; // Can hit player?
-        Projectile.timeLeft = ((int)(Random.Shared.NextSingle() * 30)) + 180; // Time in ticks before projectile dies
-        Projectile.light = 0.0f; // How much light projectile provides
+        Projectile.timeLeft = 200; // Time in ticks before projectile dies
+        Projectile.light = 0.2f; // How much light projectile provides
         Projectile.ignoreWater = false; // Does the projectile ignore water (doesn't slow down in it)
         Projectile.tileCollide = true; // Does the projectile collide with tiles, like blocks?
         Projectile.alpha = 255; // 255 = Completely transparent
