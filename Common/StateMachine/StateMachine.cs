@@ -11,10 +11,15 @@ public class StateMachine<TContext>
     public IState<TContext> CurrentState { get; private set; }
     public IState<TContext> PreviousState { get; private set; }
 
-    public StateMachine(ICollection<IState<TContext>> states, int startingStateIndex = 0)
+    public StateMachine(
+        ICollection<IState<TContext>> states,
+        TContext context,
+        int startingStateIndex = 0
+    )
     {
         States.AddRange(states);
         CurrentState = States[startingStateIndex];
+        CurrentState.Enter(null, context);
     }
 
     /// <summary>
