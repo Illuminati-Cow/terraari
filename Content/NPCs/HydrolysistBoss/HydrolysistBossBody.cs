@@ -109,12 +109,20 @@ public class HydrolysistBossBody : ModNPC
 
     public override void OnSpawn(IEntitySource source)
     {
-        var idleState = new IdleState();
         var transformationState = new TransformationState();
+        var idleState = new IdleState();
         var lightningState = new LightningState();
         var bubbleSwarmState = new BubbleSwarmState();
         var movementState = new MovementState();
 
+        transformationState.Transitions =
+        [
+            new Transition<HydrolysistContext>
+            {
+                To = idleState,
+                Conditions = [new TransitionCondition { Predicate = () => Timer <= 0f }],
+            },
+        ];
         idleState.Transitions =
         [
             new Transition<HydrolysistContext>()
@@ -168,7 +176,8 @@ public class HydrolysistBossBody : ModNPC
         ];
 
         stateMachine = new StateMachine<HydrolysistContext>(
-            [idleState, transformationState, lightningState, bubbleSwarmState, movementState]
+            [transformationState, idleState, lightningState, bubbleSwarmState, movementState],
+            new HydrolysistContext { Boss = this }
         );
         CurrentAnimation = new AnimationFrameData(1, [0]);
     }
@@ -341,23 +350,29 @@ public class HydrolysistBossBody : ModNPC
 
     private class TransformationState : IState<HydrolysistContext>
     {
-        private const float TRANSFORMATION_TIME = 100f;
+        private const float TRANSFORMATION_TIME = 240f;
+        private static readonly AnimationFrameData StartAnimation = new(3, [1, 2, 3]);
+        private static readonly AnimationFrameData FloatAnimation = new(10, [7, 8, 9]);
         public List<Transition<HydrolysistContext>> Transitions { get; set; } = [];
 
         public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
         {
             context.Boss.Timer = TRANSFORMATION_TIME;
             context.Boss.Phase = 0f;
-            context.Boss.NPC.velocity.Y = -10f;
+            context.Boss.NPC.Opacity = 0.25f;
+            context.Boss.NPC.velocity.Y = 0f;
             context.Boss.NPC.dontTakeDamage = true;
+            context.Boss.NPC.chaseable = false;
             context.Boss.NPC.netUpdate = true;
+            context.Boss.CurrentAnimation = StartAnimation;
         }
 
         public void Exit(IState<HydrolysistContext> to, HydrolysistContext context)
         {
-            context.Boss.NPC.Opacity = 1f;
+            // context.Boss.NPC.Opacity = 1f;
             context.Boss.NPC.velocity.Y = 0f;
             context.Boss.NPC.dontTakeDamage = false;
+            context.Boss.NPC.chaseable = true;
             context.Boss.NPC.netUpdate = true;
         }
 
@@ -367,8 +382,16 @@ public class HydrolysistBossBody : ModNPC
                 context.Boss.NPC.Opacity + 1 / TRANSFORMATION_TIME,
                 1f
             );
-            context.Boss.Timer -= 1f;
-            context.Boss.NPC.position -= context.Boss.NPC.velocity * 16f;
+            context.Boss.Timer--;
+            if (
+                context.Boss.Timer
+                < TRANSFORMATION_TIME
+                    - 60 * (1f / StartAnimation.frameRate) * StartAnimation.frames.Length
+            )
+            {
+                context.Boss.CurrentAnimation = FloatAnimation;
+                context.Boss.NPC.velocity.Y = -0.33f;
+            }
         }
     }
 
