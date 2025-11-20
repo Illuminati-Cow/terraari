@@ -1,3 +1,4 @@
+using terraari.Content.NPCs.HydrolysistBoss;
 using Terraria;
 using Terraria.Audio;
 using Terraria.GameContent;
@@ -6,7 +7,7 @@ using Terraria.ID;
 using Terraria.Localization;
 using Terraria.ModLoader;
 
-namespace Terraari.Content.NPCs;
+namespace terraari.Content.NPCs;
 
 [AutoloadHead]
 public class HydrolysistNpcBody : ModNPC
@@ -87,7 +88,6 @@ public class HydrolysistNpcBody : ModNPC
 
     public override void SetDefaults()
     {
-        NPC.townNPC = true; // Sets NPC to be a Town NPC
         NPC.friendly = true; // NPC Will not attack player
         NPC.width = 18;
         NPC.height = 40;
@@ -98,6 +98,7 @@ public class HydrolysistNpcBody : ModNPC
         NPC.HitSound = SoundID.NPCHit1;
         NPC.DeathSound = SoundID.NPCDeath1;
         NPC.knockBackResist = 0.5f;
+        NPC.townNPC = false;
 
         AnimationType = NPCID.Guide;
     }
@@ -154,33 +155,75 @@ public class HydrolysistNpcBody : ModNPC
     // 	}
     // }
 
-    // public override void OnSpawn(IEntitySource source)
-    // {
-    // 	if (source is EntitySource_SpawnNPC)
-    // 	{
-    // 		// A TownNPC is "unlocked" once it successfully spawns into the world.
-    // 		TownNPCRespawnSystem.unlockedExamplePersonSpawn = true;
-    // 	}
-    // }
+    public override float SpawnChance(NPCSpawnInfo spawnInfo)
+    {
+        Player player = spawnInfo.Player;
 
-    public override bool CanTownNPCSpawn(int numTownNPCs)
-    { // Requirements for the town NPC to spawn.
-        // if (TownNPCRespawnSystem.unlockedExamplePersonSpawn)
+        // Only after Plantera
+        if (!NPC.downedPlantBoss)
+            return 0f;
+
+        // Only in shimmer biome
+        if (!player.ZoneShimmer)
+            return 0f;
+
+        // Don’t spawn inside towns
+        if (spawnInfo.PlayerInTown)
+            return 0f;
+
+        //Spawn only one
+        if (NPC.AnyNPCs(ModContent.NPCType<HydrolysistNpcBody>()))
+            return 0f;
+
+        // Make him fairly rare; tweak to taste
+        return 0.99f; // 1% of normal spawns
+    }
+
+    public override bool CanChat() => true;
+
+    public override void SetChatButtons(ref string button, ref string button2)
+    {
+        button = "Summon";
+        // button2 = Language.GetTextValue("LegacyInterface.28"); // This is the key to the word "Shop"
+    }
+
+    public override void OnChatButtonClicked(bool firstButton, ref string shopName)
+    {
+        if (!firstButton)
+            return;
+
+        //Logic for spawning as TownNPC
+
+        // if (Main.netMode != NetmodeID.MultiplayerClient)
         // {
-        // 	// If Example Person has spawned in this world before, we don't require the user satisfying the ExampleItem/ExampleBlock inventory conditions for a respawn.
-        return true;
+        //     // Mark him as unlocked and transform into the town NPC version
+        //     HydrolysistWorldSystem.unlockedHydrolysist = true;
+        //     NPC.Transform(ModContent.NPCType<HydrolysistNpcBody>());
         // }
 
-        // foreach (var player in Main.ActivePlayers)
-        // {
-        // 	// Player has to have either an ExampleItem or an ExampleBlock in order for the NPC to spawn
-        // 	if (player.inventory.Any(item => item.type == ModContent.ItemType<ExampleItem>() || item.type == ModContent.ItemType<Items.Placeable.ExampleBlock>()))
-        // 	{
-        // 		return true;
-        // 	}
-        // }
+        Player player = Main.LocalPlayer;
 
-        //  return false;
+        // Only do spawn logic on server/singleplayer
+        if (Main.netMode == NetmodeID.MultiplayerClient)
+            return;
+
+        // Spawn the boss a bit above the player
+        int spawnX = (int)player.Center.X;
+        int spawnY = (int)player.Center.Y - 200;
+
+        int bossIndex = NPC.NewNPC(
+            NPC.GetSource_FromAI(),
+            spawnX,
+            spawnY,
+            ModContent.NPCType<HydrolysistBossBody>()
+        );
+
+        if (bossIndex >= 0 && bossIndex < Main.maxNPCs && Main.netMode == NetmodeID.Server)
+        {
+            NetMessage.SendData(MessageID.SyncNPC, number: bossIndex);
+        }
+
+        NPC.StrikeInstantKill();
     }
 
     //--- USED FOR DIALOGUE --- Commented out because it uses example dialogue which is not in this project.
@@ -217,16 +260,6 @@ public class HydrolysistNpcBody : ModNPC
     // 	return chosenChat;
     // }
 
-    public override void SetChatButtons(ref string button, ref string button2)
-    { // What the chat buttons are when you open up the chat UI
-        button = Language.GetTextValue("LegacyInterface.28"); // This is the key to the word "Shop"
-        button2 = "Awesomeify";
-        if (Main.LocalPlayer.HasItem(ItemID.HiveBackpack))
-        {
-            button = "Upgrade " + Lang.GetItemNameValue(ItemID.HiveBackpack);
-        }
-    }
-
     // public override void SetChatButtons(ref string button, ref string button2)
     // { // What the chat buttons are when you open up the chat UI
     // 	button = Language.GetTextValue("LegacyInterface.28"); // This is the key to the word "Shop"
@@ -236,31 +269,6 @@ public class HydrolysistNpcBody : ModNPC
     // 		button = "Upgrade " + Lang.GetItemNameValue(ItemID.HiveBackpack);
     // 	}
     // }
-
-    public override void OnChatButtonClicked(bool firstButton, ref string shop)
-    {
-        if (firstButton)
-        {
-            // We want 3 different functionalities for chat buttons, so we use HasItem to change button 1 between a shop and upgrade action.
-
-            if (Main.LocalPlayer.HasItem(ItemID.HiveBackpack))
-            {
-                SoundEngine.PlaySound(SoundID.Item37); // Reforge/Anvil sound
-
-                Main.npcChatText = UpgradedText.Value;
-
-                int hiveBackpackItemIndex = Main.LocalPlayer.FindItem(ItemID.HiveBackpack);
-                var entitySource = NPC.GetSource_GiftOrReward();
-
-                Main.LocalPlayer.inventory[hiveBackpackItemIndex].TurnToAir();
-                // Main.LocalPlayer.QuickSpawnItem(entitySource, ModContent.ItemType<WaspNest>());
-
-                return;
-            }
-
-            shop = ShopName; // Name of the shop tab we want to open.
-        }
-    }
 
     // --- NPC SHOP WITH ITEMS --- Commented out as might crash due to using example items.
 

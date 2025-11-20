@@ -12,7 +12,7 @@ using Terraria.ID;
 using Terraria.ModLoader;
 using AnimationFrameData = Terraria.Animation.AnimationFrameData;
 
-namespace Terraari.Content.NPCs.HydrolysistBoss;
+namespace terraari.Content.NPCs.HydrolysistBoss;
 
 [AutoloadBossHead]
 public class HydrolysistBossBody : ModNPC

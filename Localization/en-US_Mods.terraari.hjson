@@ -24,3 +24,16 @@ NPCs: {
 
 	HydrolysistBossBody.DisplayName: Hydrolysist Boss Body
 }
+
+Items: {
+	BubbleSword: {
+		DisplayName: Bubble Sword
+		Tooltip: ""
+	}
+}
+
+Projectiles: {
+	BigBubble.DisplayName: Big Bubble
+	ShimmerLightning.DisplayName: Shimmer Lightning
+	SmallBubble.DisplayName: Small Bubble
+}
