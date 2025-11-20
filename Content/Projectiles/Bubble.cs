@@ -8,20 +8,21 @@ namespace terraari.Content.Projectiles
 {
     public class Bubble : ModProjectile
     {
-
         private static Effect bubbleEffect;
         private static Texture2D circleTexture;
 
         private static RenderTarget2D _screenCapture;
 
-        public override string Texture => "Terraria/Images/Projectile_0"; // We will use no texture
+        public override string Texture => "Terraria/Images/Projectile_0";
 
-        public override void Load() {
-            if (!Main.dedServ) return {
+        public override void Load()
+        {
+            if (!Main.dedServ)
+            {
                 bubbleEffect = ModContent.Request<Effect>("terraari/Assets/Effects/BubbleWarp", ReLogic.Content.AssetRequestMode.ImmediateLoad).Value;
             }
-
-            if (Main.netMode != NetmodeID.Server) {
+            if (Main.netMode != NetmodeID.Server)
+            {
                 Main.QueueMainThreadAction(() =>
                 {
                     _screenCapture = new RenderTarget2D(
@@ -33,6 +34,56 @@ namespace terraari.Content.Projectiles
             }
         }
 
+        public override void SetDefaults()
+        {
+            Projectile.DamageType = DamageClass.Magic;
+            Projectile.scale = 1f;
+            Projectile.penetrate = 3;
+            Projectile.aiStyle = 0;
+            Projectile.width = Projectile.height = 10;
+            Projectile.friendly = true;
+            Projectile.hostile = false;
+            Projectile.timeLeft = 90;
+            Projectile.light = 0.3f;
+            Projectile.ignoreWater = true;
+            Projectile.tileCollide = true;
+            Projectile.alpha = 255;
+        }
+
+        public void GenerateCircleTexture()
+        {
+            if (circleTexture == null)
+            {
+                int size = 128;
+                Color[] colorData = new Color[size * size];
+                Vector2 center = new Vector2(size / 2f, size / 2f);
+                float radius = size / 2f;
+
+                for (int y = 0; y < size; y++)
+                {
+                    for (int x = 0; x < size; x++)
+                    {
+                        Vector2 pos = new Vector2(x, y);
+                        float dist = Vector2.Distance(pos, center);
+
+                        // Smooth edge with gradient
+                        if (dist <= radius)
+                        {
+                            float alpha = 1f - (dist / radius);
+                            colorData[y * size + x] = new Color(alpha, alpha, alpha, alpha);
+                        }
+                        else
+                        {
+                            colorData[y * size + x] = Color.Transparent;
+                        }
+                    }
+                }
+
+                circleTexture = new Texture2D(Main.graphics.GraphicsDevice, size, size);
+                circleTexture.SetData(colorData);
+            }
+        }
+
         public override bool PreDraw(ref Color lightColor) {
             // Capture screen before drawing this projectile
             CaptureScreen();
@@ -41,106 +92,87 @@ namespace terraari.Content.Projectiles
         
         private void CaptureScreen() {
             var gd = Main.graphics.GraphicsDevice;
-            var spriteBatch = Main.spriteBatch;
-            
-            // Save current render target
+
+            // Save previous render targets
             var previousTargets = gd.GetRenderTargets();
-            
+
             // Set our render target
             gd.SetRenderTarget(_screenCapture);
             gd.Clear(Color.Transparent);
-            
-            // Draw the background/world (this captures what's behind your projectile)
-            // You may need to call Main's draw methods here
-            // Or copy from Main.screenTarget if it exists
-            
+
+            // Draw the current screen onto _screenCapture
+            if (Main.screenTarget != null)
+            {
+                var spriteBatch = Main.spriteBatch;
+                spriteBatch.Begin();
+                spriteBatch.Draw(Main.screenTarget, Vector2.Zero, Color.White);
+                spriteBatch.End();
+            }
+
             // Restore previous render target
             gd.SetRenderTargets(previousTargets);
         }
 
-        public override void SetDefaults()
+        public override void PostDraw(Color lightColor)
         {
-            Projectile.DamageType = DamageClass.Magic; // Damage class projectile uses
-            Projectile.scale = 1f; // Projectile scale multiplier
-            Projectile.penetrate = 3; // How many hits projectile have to make before it dies. 3 means projectile will die on 3rd enemy. Setting this to 0 will make projectile die instantly
-            Projectile.aiStyle = 0; // AI style of a projectile. 0 is default bullet AI
-            Projectile.width = Projectile.height = 10; // Hitbox of projectile in pixels
-            Projectile.friendly = true; // Can hit enemies?
-            Projectile.hostile = false; // Can hit player?
-            Projectile.timeLeft = 90; // Time in ticks before projectile dies
-            Projectile.light = 0.3f; // How much light projectile provides
-            Projectile.ignoreWater = true; // Does the projectile ignore water (doesn't slow down in it)
-            Projectile.tileCollide = true; // Does the projectile collide with tiles, like blocks?
-            Projectile.alpha = 255; // Completely transparent
-        }
-        
-        public void GenerateCircleTexture()
-        {
-            // Create circle texture on first use (lazy initialization)
-            if (circleTexture == null)
-            {
-                int size = 64;
-                Color[] colorData = new Color[size * size];
-                Vector2 center = new Vector2(size / 2f, size / 2f);
-                
-                for (int y = 0; y < size; y++)
-                {
-                    for (int x = 0; x < size; x++)
-                    {
-                        Vector2 pos = new Vector2(x, y);
-                        float dist = Vector2.Distance(pos, center);
-                        
-                        if (dist <= size / 2f)
-                            colorData[y * size + x] = Color.White;
-                        else
-                            colorData[y * size + x] = Color.Transparent;
-                    }
-                }
-                
-                circleTexture = new Texture2D(Main.graphics.GraphicsDevice, size, size);
-                circleTexture.SetData(colorData);
-            }
-        }
-
-        public override void PostDraw(Color lightColor) {
             if (Main.dedServ || bubbleEffect == null) return;
 
             GenerateCircleTexture();
 
-            // Capture current screen as texture for warping
+            // Use Terraria's main screen target which already contains the rendered scene
             var screenTarget = Main.screenTarget;
-            
-            // Set shader params
+            if (screenTarget == null) return;
+
+            // Calculate position on screen
+            Vector2 screenPos = Projectile.Center - Main.screenPosition;
+            float size = 100f; // Size of the bubble effect
+
+            // Main.graphics.GraphicsDevice.Textures[1] = _screenCapture;
+            // bubbleEffect.Parameters["uImageSize1"].SetValue(new Vector2(Main.screenWidth, Main.screenHeight));
+
+            // Set shader parameters
             bubbleEffect.Parameters["uTime"]?.SetValue(Main.GlobalTimeWrappedHourly);
             bubbleEffect.Parameters["uImageScreen"]?.SetValue(screenTarget);
+            bubbleEffect.Parameters["uScreenSize"]?.SetValue(new Vector2(Main.screenWidth, Main.screenHeight));
+            bubbleEffect.Parameters["uPosition"]?.SetValue(screenPos);
+            bubbleEffect.Parameters["uSize"]?.SetValue(size);
+            
+            // Set the screen target to texture register 1 (for uImage1)
+            Main.instance.GraphicsDevice.Textures[1] = Main.screenTarget;
+        Main.instance.GraphicsDevice.SamplerStates[1] = SamplerState.LinearClamp; // or your preferred sampler state
 
-            // Apply shader
+
+            // Apply shader and draw
             Main.spriteBatch.End();
-            Main.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied,
-                SamplerState.LinearClamp, DepthStencilState.Default,
+            Main.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend,
+                SamplerState.LinearClamp, DepthStencilState.None,
                 RasterizerState.CullNone, bubbleEffect, Main.GameViewMatrix.TransformationMatrix);
+            
 
-            float size = 50f;
-            Main.spriteBatch.Draw(circleTexture, 
-                new Rectangle((int)(Projectile.Center.X - Main.screenPosition.X - size/2), 
-                            (int)(Projectile.Center.Y - Main.screenPosition.Y - size/2), 
+            // Draw the circle texture which will be warped by the shader
+            Main.spriteBatch.Draw(circleTexture,
+                new Rectangle((int)(screenPos.X - size / 2),
+                            (int)(screenPos.Y - size / 2),
                             (int)size, (int)size),
-                null, Color.White);
+                Color.White);
 
+            // Restore default spritebatch
             Main.spriteBatch.End();
             Main.spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend,
-                SamplerState.LinearClamp, DepthStencilState.Default,
+                SamplerState.LinearClamp, DepthStencilState.None,
                 RasterizerState.CullNone, null, Main.GameViewMatrix.TransformationMatrix);
         }
 
-        public override void Unload() {
+        public override void Unload()
+        {
             bubbleEffect = null;
-            circleTexture?.Dispose();
+            // circleTexture?.Dispose(); // Allegedly GPU handles this on shuddown automatically. Causes crash if you include it here because of thread issues
             circleTexture = null;
         }
 
-        public override void AI() { // This hook updates every tick
-            if (Main.netMode != NetmodeID.Server) // Do not spawn dust on server!
+        public override void AI()
+        {
+            if (Main.netMode != NetmodeID.Server)
             {
                 Dust dust = Dust.NewDustPerfect(
                     Position: Projectile.Center,
@@ -149,18 +181,19 @@ namespace terraari.Content.Projectiles
                     Alpha: 100,
                     newColor: Color.White,
                     Scale: 0.9f
-                    );
-                dust.noGravity = true; // Dust don't have gravity
+                );
+                dust.noGravity = true;
                 dust.fadeIn = -1f;
             }
         }
 
-        public override void OnKill(int timeLeft) { // What happens on projectile death
+        public override void OnKill(int timeLeft)
+        {
             int numDust = 20;
-            for (int i = 0; i < numDust; i++) // Loop through code below numDust times
+            for (int i = 0; i < numDust; i++)
             {
-                Vector2 velocity = Vector2.One.RotatedBy(MathHelper.ToRadians(360 / numDust * i)); // Circular velocity
-                Dust.NewDustPerfect(Projectile.Center, DustID.Electric, velocity).noGravity = true; // Creating dust
+                Vector2 velocity = Vector2.One.RotatedBy(MathHelper.ToRadians(360 / numDust * i));
+                Dust.NewDustPerfect(Projectile.Center, DustID.Electric, velocity).noGravity = true;
             }
         }
     }
