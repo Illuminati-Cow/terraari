@@ -142,14 +142,6 @@ public class HydrolysistBossBody : ModNPC
                 ],
             },
         ];
-        transformationState.Transitions =
-        [
-            new Transition<HydrolysistContext>
-            {
-                To = idleState,
-                Conditions = [new TransitionCondition { Predicate = () => Timer <= 0f }],
-            },
-        ];
         lightningState.Transitions =
         [
             new Transition<HydrolysistContext>()
@@ -314,6 +306,8 @@ public class HydrolysistBossBody : ModNPC
         }
         var context = new HydrolysistContext { Boss = this };
         stateMachine.Tick(context);
+        if (stateMachine.CurrentState is not TransformationState)
+            Lighting.AddLight(center, Color.Pink.ToVector3() * 0.75f);
     }
 
     private class HydrolysistContext
@@ -382,6 +376,12 @@ public class HydrolysistBossBody : ModNPC
                 context.Boss.NPC.Opacity + 1 / TRANSFORMATION_TIME,
                 1f
             );
+            Lighting.AddLight(
+                context.Boss.NPC.Center,
+                Color.Pink.ToVector3()
+                    * (0.75f + 0.25f * MathF.Sin(context.Boss.Timer * MathF.PI / 15f))
+            );
+            ;
             context.Boss.Timer--;
             if (
                 context.Boss.Timer
@@ -595,6 +595,27 @@ public class HydrolysistBossBody : ModNPC
                 Main.myPlayer
             );
             SoundEngine.PlaySound(SoundID.Item85, context.Boss.NPC.Center);
+        }
+    }
+
+    private class GiantBubbleState : IState<HydrolysistContext>
+    {
+        public List<Transition<HydrolysistContext>> Transitions { get; set; }
+
+        public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
+        {
+            context.Boss.Timer = 0f;
+        }
+
+        public void Exit(IState<HydrolysistContext> to, HydrolysistContext context) { }
+
+        public void Tick(HydrolysistContext context)
+        {
+            context.Boss.Timer -= 1f;
+            if (context.Boss.Timer <= 0)
+            {
+                context.Boss.Phase++;
+            }
         }
     }
 
