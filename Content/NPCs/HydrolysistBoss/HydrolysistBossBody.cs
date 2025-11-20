@@ -5,6 +5,7 @@ using Terraari.Common.StateMachine;
 using Terraari.Common.Systems;
 using Terraari.Content.Projectiles;
 using Terraria;
+using Terraria.Audio;
 using Terraria.DataStructures;
 using Terraria.GameContent.ItemDropRules;
 using Terraria.Graphics.CameraModifiers;
@@ -112,6 +113,7 @@ public class HydrolysistBossBody : ModNPC
         var transformationState = new TransformationState();
         var lightningState = new LightningState();
         var bubbleSwarmState = new BubbleSwarmState();
+        var movementState = new MovementState();
 
         idleState.Transitions =
         [
@@ -144,7 +146,7 @@ public class HydrolysistBossBody : ModNPC
         [
             new Transition<HydrolysistContext>()
             {
-                To = idleState,
+                To = movementState,
                 Conditions = [new TransitionCondition { Predicate = () => Phase >= 3f }],
             },
         ];
@@ -152,12 +154,22 @@ public class HydrolysistBossBody : ModNPC
         [
             new Transition<HydrolysistContext>()
             {
-                To = idleState,
+                To = movementState,
                 Conditions = [new TransitionCondition { Predicate = () => Phase >= 2f }],
             },
         ];
+        movementState.Transitions =
+        [
+            new Transition<HydrolysistContext>()
+            {
+                To = idleState,
+                Conditions = [new TransitionCondition { Predicate = () => Phase > 0f }],
+            },
+        ];
 
-        stateMachine = new StateMachine<HydrolysistContext>([idleState, transformationState]);
+        stateMachine = new StateMachine<HydrolysistContext>(
+            [idleState, transformationState, lightningState, bubbleSwarmState, movementState]
+        );
         CurrentAnimation = new AnimationFrameData(1, [0]);
     }
 
@@ -270,6 +282,27 @@ public class HydrolysistBossBody : ModNPC
 
     public override void AI()
     {
+        Vector2 center = NPC.Center;
+        // Get a target
+        if (
+            NPC.target < 0
+            || NPC.target == Main.maxPlayers
+            || Main.player[NPC.target].dead
+            || !Main.player[NPC.target].active
+        )
+            NPC.TargetClosest();
+
+        Player player = Main.player[NPC.target];
+
+        if (player.dead || !player.active || Vector2.Distance(player.Center, center) > AggroRadius)
+        {
+            NPC.life = 0;
+            NPC.HitEffect();
+            NPC.active = false;
+            if (Main.netMode != NetmodeID.MultiplayerClient)
+                NPC.StrikeInstantKill();
+            return;
+        }
         var context = new HydrolysistContext { Boss = this };
         stateMachine.Tick(context);
     }
@@ -436,6 +469,7 @@ public class HydrolysistBossBody : ModNPC
                 spawnAngle,
                 Main.rand.Next(100)
             );
+            SoundEngine.PlaySound(SoundID.DD2_LightningAuraZap, context.Boss.NPC.Center);
         }
 
         private static void Recover(HydrolysistContext context)
@@ -537,6 +571,42 @@ public class HydrolysistBossBody : ModNPC
                 10,
                 Main.myPlayer
             );
+            SoundEngine.PlaySound(SoundID.Item85, context.Boss.NPC.Center);
+        }
+    }
+
+    private class MovementState : IState<HydrolysistContext>
+    {
+        private const float MOVE_TIME = 100f;
+        private static readonly AnimationFrameData moveAnimation = new(10, [4, 5, 6]);
+        public List<Transition<HydrolysistContext>> Transitions { get; set; }
+        private Vector2 location;
+
+        public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
+        {
+            context.Boss.Timer = MOVE_TIME;
+            context.Boss.Phase = 0f;
+            context.Boss.CurrentAnimation = moveAnimation;
+            context.Boss.NPC.dontTakeDamage = true;
+            context.Boss.NPC.netUpdate = true;
+            if (Main.netMode == NetmodeID.MultiplayerClient)
+                return;
+        }
+
+        public void Exit(IState<HydrolysistContext> to, HydrolysistContext context)
+        {
+            context.Boss.NPC.velocity.Y = 0f;
+            context.Boss.NPC.dontTakeDamage = false;
+            context.Boss.NPC.netUpdate = true;
+        }
+
+        public void Tick(HydrolysistContext context)
+        {
+            context.Boss.Timer -= 1f;
+            if (context.Boss.Timer <= 0)
+            {
+                context.Boss.Phase++;
+            }
         }
     }
 
