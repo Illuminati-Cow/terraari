@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Terraari.Common.StateMachine;
 using Terraari.Common.Systems;
+using Terraari.Content.Buffs;
 using Terraari.Content.Projectiles;
 using Terraria;
 using Terraria.Audio;
@@ -12,6 +13,7 @@ using Terraria.Graphics.CameraModifiers;
 using Terraria.ID;
 using Terraria.ModLoader;
 using AnimationFrameData = Terraria.Animation.AnimationFrameData;
+using ShimmerHelper = Terraari.Common.Helpers.ShimmerHelper;
 
 namespace terraari.Content.NPCs.HydrolysistBoss;
 
@@ -283,6 +285,13 @@ public class HydrolysistBossBody : ModNPC
 
     public override void AI()
     {
+        int strikeDamage = NPC.GetAttackDamage_ForProjectiles_MultiLerp(30, 45, 60);
+        if (
+            Main.netMode != NetmodeID.MultiplayerClient
+            && Timer % 2 != 0
+            && stateMachine.CurrentState is not TransformationState
+        )
+            StrikeShimmeredPlayers(strikeDamage);
         Vector2 center = NPC.Center;
         // Get a target
         if (
@@ -291,7 +300,9 @@ public class HydrolysistBossBody : ModNPC
             || Main.player[NPC.target].dead
             || !Main.player[NPC.target].active
         )
+        {
             NPC.TargetClosest();
+        }
 
         Player player = Main.player[NPC.target];
 
@@ -305,15 +316,123 @@ public class HydrolysistBossBody : ModNPC
                 NPC.EncourageDespawn(120);
             return;
         }
-        var context = new HydrolysistContext { Boss = this };
+        var context = new HydrolysistContext { Boss = this, Target = player };
         stateMachine.Tick(context);
         if (stateMachine.CurrentState is not TransformationState)
             Lighting.AddLight(center, Color.Pink.ToVector3() * 0.75f);
     }
 
+    private void StrikeShimmeredPlayers(int strikeDamage)
+    {
+        foreach (Player player in Main.ActivePlayers)
+        {
+            if (!player.shimmering)
+                continue;
+            int finalDamage = (int)player.GetTotalDamage(DamageClass.Magic).ApplyTo(strikeDamage);
+            player.Hurt(
+                PlayerDeathReason.ByNPC(this.NPC.whoAmI),
+                finalDamage,
+                -player.direction,
+                knockback: 4f
+            );
+            player.AddBuff(ModContent.BuffType<ShimmerImmunityBuff>(), 300, false);
+            Main.NewText(
+                Collision.SolidCollision(player.position, player.width, player.height, false)
+            );
+            if (Collision.SolidCollision(player.position, player.width, player.height - 2, false))
+            {
+                Vector2? position = ShimmerHelper.FindSpotWithoutShimmer(player, 1024, false);
+                if (position.HasValue)
+                {
+                    Vector2 spot = position.Value;
+                    Lighting.AddLight(spot, Color.White.ToVector3());
+                    // spot.X += player.width;
+                    spot.Y -= player.height * 2;
+                    player.position = spot;
+                    DebugOverlaySystem.DrawRect(
+                        new Rectangle((int)spot.X, (int)spot.Y, player.width, player.height),
+                        Color.White,
+                        400,
+                        5f
+                    );
+                    DebugOverlaySystem.DrawLine(player.Center, spot, Color.White, 400);
+                }
+            }
+            CreateArc(player);
+        }
+    }
+
+    private void CreateArc(Player player)
+    {
+        Vector2 start = NPC.Center;
+        Vector2 end = player.Center;
+        float distance = Vector2.Distance(start, end);
+
+        // Number of intermediate points – scales with distance but clamped
+        int segments = Math.Clamp((int)(distance / 40f), 4, 24);
+
+        var points = new List<Vector2>(segments + 1) { start };
+
+        // Build a jagged, semi-random polyline between start and end
+        Vector2 dir = end - start;
+        Vector2 perp = new(-dir.Y, dir.X);
+        if (perp == Vector2.Zero)
+            perp = Vector2.UnitX;
+        perp = Vector2.Normalize(perp);
+
+        float maxOffset = Math.Min(120f, distance * 0.25f);
+        for (int i = 1; i < segments; i++)
+        {
+            float t = i / (float)segments;
+            Vector2 point = Vector2.Lerp(start, end, t);
+
+            // Offset stronger near the middle, weaker near endpoints
+            float midFactor = 1f - Math.Abs(2f * t - 1f);
+            float offset = Main.rand.NextFloat(-1f, 1f) * maxOffset * midFactor;
+            point += perp * offset;
+            // small random jitter
+            point += Main.rand.NextVector2Circular(4f, 4f);
+            points.Add(point);
+        }
+        points.Add(end);
+
+        if (Main.netMode == NetmodeID.Server)
+            return;
+
+        SoundEngine.PlaySound(SoundID.DD2_EtherianPortalDryadTouch, NPC.Center);
+        for (int s = 0; s < points.Count - 1; s++)
+        {
+            Vector2 a = points[s];
+            Vector2 b = points[s + 1];
+            float segLen = Vector2.Distance(a, b);
+            int dustCount = Math.Max(2, (int)(segLen / 8f));
+            for (int k = 0; k <= dustCount; k++)
+            {
+                float u = k / (float)dustCount;
+                Vector2 pos = Vector2.Lerp(a, b, u) + Main.rand.NextVector2Circular(2f, 2f);
+                Vector2 velocity =
+                    (b - a).SafeNormalize(Vector2.UnitY) * Main.rand.NextFloat(0.2f, 2f);
+                var d = Dust.NewDustPerfect(pos, DustID.Electric, velocity);
+                d.noGravity = true;
+                d.scale = Main.rand.NextFloat(0.9f, 1.6f);
+                d.fadeIn = 0.7f;
+            }
+
+            // occasional brighter sparks at segment midpoints
+            if (Main.rand.NextBool(3))
+            {
+                Vector2 mid = (a + b) * 0.5f + Main.rand.NextVector2Circular(6f, 6f);
+                var spark = Dust.NewDustPerfect(mid, DustID.Electric, (mid - NPC.Center) * 0.02f);
+                spark.noGravity = true;
+                spark.scale = Main.rand.NextFloat(1.6f, 2.4f);
+            }
+        }
+    }
+
     private class HydrolysistContext
     {
         public HydrolysistBossBody Boss;
+        public Player Target;
     }
 
     private class IdleState : IState<HydrolysistContext>
