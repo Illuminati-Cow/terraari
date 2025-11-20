@@ -40,5 +40,18 @@ Mods: {
 			SmallBubble.DisplayName: Small Bubble
 			ShimmerLightning.DisplayName: Shimmer Lightning
 		}
+
+		Buffs: {
+			ShimmerImmunityBuff: {
+				DisplayName: Shimmer Immunity Buff
+				Description: Mods.Terraari.Buffs.ShimmerImmunityBuff.Description
+			}
+		}
+
+		Keybinds: {
+			"Toggle Debug Overlay.DisplayName": Toggle  Debug  Overlay
+			"Toggle Tile Grid.DisplayName": Toggle  Tile  Grid
+			"Clear Debug Drawings.DisplayName": Clear  Debug  Drawings
+		}
 	}
 }
