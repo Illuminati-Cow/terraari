@@ -144,6 +144,14 @@ public class HydrolysistBossBody : ModNPC
                     new TransitionCondition { Predicate = () => Timer <= 0 && Phase == 1f },
                 ],
             },
+            new Transition<HydrolysistContext>()
+            {
+                To = giantBubbleState,
+                Conditions =
+                [
+                    new TransitionCondition { Predicate = () => Timer <= 0 && Phase == 2f },
+                ],
+            },
         ];
         lightningState.Transitions =
         [
@@ -473,7 +481,7 @@ public class HydrolysistBossBody : ModNPC
             context.Boss.Timer -= 1f;
             if (Main.netMode == NetmodeID.MultiplayerClient || context.Boss.Timer != 0f)
                 return;
-            context.Boss.Phase = ++phaseTracker % 2;
+            context.Boss.Phase = ++phaseTracker % Transitions.Count;
             context.Boss.NPC.netUpdate = true;
         }
     }
