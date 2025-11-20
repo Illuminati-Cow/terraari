@@ -12,11 +12,50 @@ namespace terraari.Content.Projectiles
         private static Effect bubbleEffect;
         private static Texture2D circleTexture;
 
+        private static RenderTarget2D _screenCapture;
+
         public override string Texture => "Terraria/Images/Projectile_0"; // We will use no texture
 
         public override void Load() {
-            if (Main.dedServ) return;
-            bubbleEffect = ModContent.Request<Effect>("terraari/Assets/Effects/BubbleWarp", ReLogic.Content.AssetRequestMode.ImmediateLoad).Value;
+            if (!Main.dedServ) return {
+                bubbleEffect = ModContent.Request<Effect>("terraari/Assets/Effects/BubbleWarp", ReLogic.Content.AssetRequestMode.ImmediateLoad).Value;
+            }
+
+            if (Main.netMode != NetmodeID.Server) {
+                Main.QueueMainThreadAction(() =>
+                {
+                    _screenCapture = new RenderTarget2D(
+                        Main.graphics.GraphicsDevice,
+                        Main.screenWidth,
+                        Main.screenHeight
+                    );
+                });
+            }
+        }
+
+        public override bool PreDraw(ref Color lightColor) {
+            // Capture screen before drawing this projectile
+            CaptureScreen();
+            return true;
+        }
+        
+        private void CaptureScreen() {
+            var gd = Main.graphics.GraphicsDevice;
+            var spriteBatch = Main.spriteBatch;
+            
+            // Save current render target
+            var previousTargets = gd.GetRenderTargets();
+            
+            // Set our render target
+            gd.SetRenderTarget(_screenCapture);
+            gd.Clear(Color.Transparent);
+            
+            // Draw the background/world (this captures what's behind your projectile)
+            // You may need to call Main's draw methods here
+            // Or copy from Main.screenTarget if it exists
+            
+            // Restore previous render target
+            gd.SetRenderTargets(previousTargets);
         }
 
         public override void SetDefaults()
@@ -99,12 +138,6 @@ namespace terraari.Content.Projectiles
             circleTexture?.Dispose();
             circleTexture = null;
         }
-
-
-
-
-
-
 
         public override void AI() { // This hook updates every tick
             if (Main.netMode != NetmodeID.Server) // Do not spawn dust on server!
