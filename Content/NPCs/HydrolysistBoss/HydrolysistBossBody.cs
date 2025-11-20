@@ -115,6 +115,7 @@ public class HydrolysistBossBody : ModNPC
         var idleState = new IdleState();
         var lightningState = new LightningState();
         var bubbleSwarmState = new BubbleSwarmState();
+        var giantBubbleState = new GiantBubbleState();
         var movementState = new MovementState();
 
         transformationState.Transitions =
@@ -160,6 +161,14 @@ public class HydrolysistBossBody : ModNPC
                 Conditions = [new TransitionCondition { Predicate = () => Phase >= 2f }],
             },
         ];
+        giantBubbleState.Transitions =
+        [
+            new Transition<HydrolysistContext>()
+            {
+                To = movementState,
+                Conditions = [new TransitionCondition { Predicate = () => Phase >= 2f }],
+            },
+        ];
         movementState.Transitions =
         [
             new Transition<HydrolysistContext>()
@@ -170,7 +179,14 @@ public class HydrolysistBossBody : ModNPC
         ];
 
         stateMachine = new StateMachine<HydrolysistContext>(
-            [transformationState, idleState, lightningState, bubbleSwarmState, movementState],
+            [
+                transformationState,
+                idleState,
+                lightningState,
+                bubbleSwarmState,
+                giantBubbleState,
+                movementState,
+            ],
             new HydrolysistContext { Boss = this }
         );
         CurrentAnimation = new AnimationFrameData(1, [0]);
@@ -720,6 +736,10 @@ public class HydrolysistBossBody : ModNPC
 
     private class GiantBubbleState : IState<HydrolysistContext>
     {
+        private const float CHARGE_TIME = 60f;
+        private const float BUBBLE_SPEED = 5f;
+        private static readonly AnimationFrameData chargeAnimation = new(10, [13, 14, 15]);
+        private static readonly AnimationFrameData fireAnimation = new(10, [10, 11, 12]);
         public List<Transition<HydrolysistContext>> Transitions { get; set; }
 
         public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
@@ -731,17 +751,63 @@ public class HydrolysistBossBody : ModNPC
 
         public void Tick(HydrolysistContext context)
         {
+            switch (context.Boss.Phase)
+            {
+                case 0:
+                    if (context.Boss.Timer <= 0)
+                    {
+                        context.Boss.Timer = CHARGE_TIME;
+                        context.Boss.DebugPrint("Entering Charging Phase");
+                    }
+                    context.Boss.CurrentAnimation = chargeAnimation;
+                    if (context.Target.active)
+                        FaceHorizontallyTowards(context.Boss.NPC, context.Target.Center);
+                    break;
+                case 1:
+                    if (context.Boss.Timer <= 0)
+                    {
+                        context.Boss.Timer = 1;
+                    }
+                    FireBubble(context);
+                    break;
+            }
             context.Boss.Timer -= 1f;
             if (context.Boss.Timer <= 0)
             {
                 context.Boss.Phase++;
             }
         }
+
+        private static void FireBubble(HydrolysistContext context)
+        {
+            context.Boss.CurrentAnimation = fireAnimation;
+            FaceHorizontallyTowards(context.Boss.NPC, context.Target.Center);
+
+            if (Main.netMode == NetmodeID.MultiplayerClient)
+                return;
+
+            Vector2 directionToPlayer = SafeVector(
+                context.Target.position - context.Boss.NPC.position,
+                1
+            );
+            directionToPlayer.Normalize();
+            Vector2 velocity = directionToPlayer * BUBBLE_SPEED;
+            Projectile.NewProjectileDirect(
+                context.Boss.NPC.GetSource_FromAI(),
+                context.Boss.NPC.Center,
+                velocity,
+                ModContent.ProjectileType<BigBubble>(),
+                160,
+                10,
+                Main.myPlayer
+            );
+            SoundEngine.PlaySound(SoundID.Item85, context.Boss.NPC.Center);
+        }
     }
 
     private class MovementState : IState<HydrolysistContext>
     {
-        private const float MOVE_TIME = 100f;
+        private const float MOVE_TIME = 1f; // TEMP SKIP VALUE
         private static readonly AnimationFrameData moveAnimation = new(10, [4, 5, 6]);
         public List<Transition<HydrolysistContext>> Transitions { get; set; }
         private Vector2 location;
