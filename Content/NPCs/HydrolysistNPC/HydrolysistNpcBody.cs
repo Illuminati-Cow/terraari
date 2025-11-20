@@ -1,4 +1,6 @@
+using Mono.CompilerServices.SymbolWriter;
 using terraari.Content.NPCs.HydrolysistBoss;
+using Terraari.Common.Systems;
 using Terraria;
 using Terraria.Audio;
 using Terraria.GameContent;
@@ -173,6 +175,9 @@ public class HydrolysistNpcBody : ModNPC
 
         //Spawn only one
         if (NPC.AnyNPCs(ModContent.NPCType<HydrolysistNpcBody>()))
+            return 0f;
+
+        if (DownedBossSystem.downedHydrolysistBoss)
             return 0f;
 
         // Make him fairly rare; tweak to taste
