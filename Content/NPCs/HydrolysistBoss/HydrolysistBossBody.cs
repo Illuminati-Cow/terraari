@@ -300,8 +300,9 @@ public class HydrolysistBossBody : ModNPC
             NPC.life = 0;
             NPC.HitEffect();
             NPC.active = false;
+            NPC.velocity.Y -= 0.02f;
             if (Main.netMode != NetmodeID.MultiplayerClient)
-                NPC.StrikeInstantKill();
+                NPC.EncourageDespawn(120);
             return;
         }
         var context = new HydrolysistContext { Boss = this };
