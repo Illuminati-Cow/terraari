@@ -650,7 +650,8 @@ public class HydrolysistBossBody : ModNPC
         private const float CHARGE_TIME = 120f;
         private const float ATTACK_TIME = 300f;
         private const int FIRE_INTERVAL = 5;
-        private const float BUBBLE_SPEED = 20f;
+        private const float BUBBLE_SPEED = 8f;
+        private static int BUBBLE_DAMAGE;
         private static readonly AnimationFrameData chargeAnimation = new(10, [13, 14, 15]);
         private static readonly AnimationFrameData fireAnimation = new(10, [10, 11, 12]);
 
@@ -660,6 +661,7 @@ public class HydrolysistBossBody : ModNPC
         {
             context.Boss.Timer = -1f;
             context.Boss.Phase = 0f;
+            BUBBLE_DAMAGE = context.Boss.NPC.GetAttackDamage_ForProjectiles(25, 30);
         }
 
         public void Exit(IState<HydrolysistContext> to, HydrolysistContext context) { }
@@ -734,7 +736,7 @@ public class HydrolysistBossBody : ModNPC
                 context.Boss.NPC.Center,
                 velocity,
                 ModContent.ProjectileType<SmallBubble>(),
-                10,
+                BUBBLE_DAMAGE,
                 10,
                 Main.myPlayer
             );
@@ -753,6 +755,8 @@ public class HydrolysistBossBody : ModNPC
         public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
         {
             context.Boss.Timer = 0f;
+            context.Boss.Phase = 0f;
+            context.Boss.NPC.netUpdate = true;
         }
 
         public void Exit(IState<HydrolysistContext> to, HydrolysistContext context) { }
@@ -774,7 +778,7 @@ public class HydrolysistBossBody : ModNPC
                 case 1:
                     if (context.Boss.Timer <= 0)
                     {
-                        context.Boss.Timer = 1;
+                        context.Boss.Timer = 10f;
                     }
                     FireBubble(context);
                     break;
@@ -790,6 +794,9 @@ public class HydrolysistBossBody : ModNPC
         {
             context.Boss.CurrentAnimation = fireAnimation;
             FaceHorizontallyTowards(context.Boss.NPC, context.Target.Center);
+
+            if (context.Boss.Timer < 10)
+                return;
 
             if (Main.netMode == NetmodeID.MultiplayerClient)
                 return;
@@ -807,7 +814,9 @@ public class HydrolysistBossBody : ModNPC
                 ModContent.ProjectileType<BigBubble>(),
                 160,
                 10,
-                Main.myPlayer
+                Main.myPlayer,
+                context.Target.whoAmI, // Initial homing target
+                0
             );
             SoundEngine.PlaySound(SoundID.Item85, context.Boss.NPC.Center);
         }
