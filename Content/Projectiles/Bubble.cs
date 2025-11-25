@@ -139,7 +139,7 @@ namespace terraari.Content.Projectiles
             
             // Set the screen target to texture register 1 (for uImage1)
             Main.instance.GraphicsDevice.Textures[1] = Main.screenTarget;
-        Main.instance.GraphicsDevice.SamplerStates[1] = SamplerState.LinearClamp; // or your preferred sampler state
+            Main.instance.GraphicsDevice.SamplerStates[1] = SamplerState.LinearClamp; // or your preferred sampler state
 
 
             // Apply shader and draw
