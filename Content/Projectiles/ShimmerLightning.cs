@@ -53,7 +53,7 @@ public class ShimmerLightning : ModProjectile
         Projectile.hostile = true;
         Projectile.alpha = 255;
         Projectile.ignoreWater = true;
-        Projectile.tileCollide = true;
+        Projectile.tileCollide = false;
         Projectile.extraUpdates = 4;
         Projectile.timeLeft = 240 * (Projectile.extraUpdates + 1);
         Projectile.penetrate = 1;
@@ -81,22 +81,9 @@ public class ShimmerLightning : ModProjectile
             SpawnCollisionSmoke();
             return;
         }
-        if (Projectile.shimmerWet)
-            Main.NewText("Shimmered lightning");
-        if (Projectile.owner == Main.myPlayer && Projectile.shimmerWet)
-        {
-            Projectile.NewProjectile(
-                Projectile.GetSource_FromAI(),
-                Projectile.Center,
-                -Vector2.UnitY,
-                ModContent.ProjectileType<BigBubble>(),
-                50,
-                4.5f,
-                Projectile.owner
-            );
-            Projectile.Kill();
+
+        if (HandleShimmerCollision())
             return;
-        }
 
         if (Timer % Projectile.extraUpdates == 0)
         {
@@ -120,6 +107,41 @@ public class ShimmerLightning : ModProjectile
         xVelocityOffset += dir.X * (Projectile.extraUpdates + 1) * 2f * speed;
         Projectile.velocity = dir.RotatedBy(InitialDirection + MathF.PI / 2f) * speed;
         Projectile.rotation = Projectile.velocity.ToRotation() + MathF.PI / 2f;
+    }
+
+    private bool HandleShimmerCollision()
+    {
+        int x = (int)Projectile.position.X / 16;
+        int y = (int)Projectile.position.Y / 16;
+        var tile = Framing.GetTileSafely(x, y);
+        bool colliding = tile is { LiquidAmount: > 0, LiquidType: LiquidID.Shimmer };
+
+        if (!colliding)
+            return false;
+
+        if (!Main.dedServ)
+        {
+            SpawnCollisionSmoke();
+            SpawnCollisionSparks(true);
+        }
+
+        if (Projectile.owner != Main.myPlayer)
+            return false;
+
+        Projectile.NewProjectile(
+            Projectile.GetSource_FromAI(),
+            Projectile.Center,
+            -Vector2.UnitY * 2.5f,
+            ModContent.ProjectileType<BigBubble>(),
+            50,
+            4.5f,
+            Projectile.owner,
+            0,
+            0,
+            1 // Do not spawn bubbles
+        );
+        Projectile.Kill();
+        return true;
     }
 
     public override bool? Colliding(Rectangle projHitbox, Rectangle targetHitbox)
@@ -149,10 +171,10 @@ public class ShimmerLightning : ModProjectile
     public override bool OnTileCollide(Vector2 oldVelocity)
     {
         // Despawn the projectile on tile collision only if it failed to branch
-        if (FailedToBranch)
-            return true;
-        Projectile.position += Projectile.velocity;
-        Projectile.velocity = Vector2.Zero;
+        // if (FailedToBranch)
+        //     return true;
+        // Projectile.position += Projectile.velocity;
+        // Projectile.velocity = Vector2.Zero;
 
         return false;
     }
