@@ -360,9 +360,6 @@ public class HydrolysistBossBody : ModNPC
                 knockback: 4f
             );
             player.AddBuff(ModContent.BuffType<ShimmerImmunityBuff>(), 300, false);
-            Main.NewText(
-                Collision.SolidCollision(player.position, player.width, player.height, false)
-            );
             if (Collision.SolidCollision(player.position, player.width, player.height - 2, false))
             {
                 Vector2? position = ShimmerHelper.FindSpotWithoutShimmer(player, 1024, false);
@@ -373,13 +370,6 @@ public class HydrolysistBossBody : ModNPC
                     // spot.X += player.width;
                     spot.Y -= player.height * 2;
                     player.position = spot;
-                    DebugOverlaySystem.DrawRect(
-                        new Rectangle((int)spot.X, (int)spot.Y, player.width, player.height),
-                        Color.White,
-                        400,
-                        5f
-                    );
-                    DebugOverlaySystem.DrawLine(player.Center, spot, Color.White, 400);
                 }
             }
             CreateArc(player);
@@ -436,19 +426,22 @@ public class HydrolysistBossBody : ModNPC
                 Vector2 pos = Vector2.Lerp(a, b, u) + Main.rand.NextVector2Circular(2f, 2f);
                 Vector2 velocity =
                     (b - a).SafeNormalize(Vector2.UnitY) * Main.rand.NextFloat(0.2f, 2f);
-                var d = Dust.NewDustPerfect(pos, DustID.Electric, velocity);
+                var d = Dust.NewDustPerfect(pos, DustID.ShimmerSpark, velocity);
                 d.noGravity = true;
-                d.scale = Main.rand.NextFloat(0.9f, 1.6f);
-                d.fadeIn = 0.7f;
+                d.scale = Main.rand.NextFloat(2f, 3f);
             }
 
             // occasional brighter sparks at segment midpoints
             if (Main.rand.NextBool(3))
             {
                 Vector2 mid = (a + b) * 0.5f + Main.rand.NextVector2Circular(6f, 6f);
-                var spark = Dust.NewDustPerfect(mid, DustID.Electric, (mid - NPC.Center) * 0.02f);
+                var spark = Dust.NewDustPerfect(
+                    mid,
+                    DustID.ShimmerSpark,
+                    (mid - NPC.Center) * 0.02f
+                );
                 spark.noGravity = true;
-                spark.scale = Main.rand.NextFloat(1.6f, 2.4f);
+                spark.scale = Main.rand.NextFloat(2.6f, 3.4f);
             }
         }
     }
