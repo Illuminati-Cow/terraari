@@ -21,6 +21,12 @@ public class BigBubble : ModProjectile
         set => Projectile.ai[0] = value?.whoAmI ?? 0;
     }
 
+    private bool ShouldSpawnBubbles
+    {
+        get => Projectile.ai[2] == 0;
+        set => Projectile.ai[2] = value ? 1 : 0;
+    }
+
     public ref float DelayTimer => ref Projectile.ai[1];
 
     public override void Load()
@@ -46,7 +52,7 @@ public class BigBubble : ModProjectile
         Projectile.width = Projectile.height = 10; // Hitbox of projectile in pixels
         Projectile.friendly = false; // Can hit enemies?
         Projectile.hostile = true; // Can hit player?
-        Projectile.timeLeft = 90; // Time in ticks before projectile dies
+        Projectile.timeLeft = 150; // Time in ticks before projectile dies
         Projectile.light = 0.3f; // How much light projectile provides
         Projectile.ignoreWater = true; // Does the projectile ignore water (doesn't slow down in it)
         Projectile.tileCollide = false; // Does the projectile collide with tiles, like blocks?
@@ -156,12 +162,13 @@ public class BigBubble : ModProjectile
         {
             Dust dust = Dust.NewDustPerfect(
                 Position: Projectile.Center,
-                Type: DustID.Electric,
+                Type: DustID.ShimmerSpark,
                 Velocity: Vector2.Zero,
                 Alpha: 100,
                 newColor: Color.White,
                 Scale: 0.9f
             );
+            dust.scale = Main.rand.NextFloat(1f, 1.4f);
             dust.noGravity = true;
             dust.fadeIn = -1f;
         }
@@ -242,25 +249,24 @@ public class BigBubble : ModProjectile
                     true; // Creating dust
             }
         }
+
+        if (Projectile.owner != Main.myPlayer || !ShouldSpawnBubbles)
+            return;
+
         const int numBubbles = 32;
         int bubbleDamage = Projectile.damage / numBubbles * 2;
-        if (Projectile.owner == Main.myPlayer)
+        for (int i = 0; i < numBubbles; i++)
         {
-            for (int i = 0; i < numBubbles; i++)
-            {
-                Vector2 velocity = Vector2.One.RotatedBy(
-                    MathHelper.ToRadians(360f / numBubbles * i)
-                ); // Circular velocity
-                var smallBubble = Projectile.NewProjectileDirect(
-                    Projectile.GetSource_FromAI(),
-                    Projectile.Center,
-                    velocity,
-                    ModContent.ProjectileType<SmallBubble>(),
-                    bubbleDamage,
-                    4.5f,
-                    Main.myPlayer
-                );
-            }
+            Vector2 velocity = Vector2.One.RotatedBy(MathHelper.ToRadians(360f / numBubbles * i)); // Circular velocity
+            Projectile.NewProjectileDirect(
+                Projectile.GetSource_FromAI(),
+                Projectile.Center,
+                velocity,
+                ModContent.ProjectileType<SmallBubble>(),
+                bubbleDamage,
+                4.5f,
+                Main.myPlayer
+            );
         }
     }
 }
