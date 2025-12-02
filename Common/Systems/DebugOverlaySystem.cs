@@ -152,7 +152,16 @@ public class DebugOverlaySystem : ModSystem
         Player p = Main.LocalPlayer;
         if (p == null)
             return;
-
+        spriteBatch.End();
+        spriteBatch.Begin(
+            SpriteSortMode.Deferred,
+            BlendState.NonPremultiplied,
+            SamplerState.PointClamp,
+            DepthStencilState.None,
+            RasterizerState.CullNone,
+            null,
+            Main.GameViewMatrix.TransformationMatrix
+        );
         // World -> screen helper
         Vector2 ToScreen(Vector2 world) => world - Main.screenPosition;
 
@@ -258,6 +267,8 @@ public class DebugOverlaySystem : ModSystem
             else
                 _tileHighlights[i] = th;
         }
+        spriteBatch.End();
+        spriteBatch.Begin();
     }
 
     private static void DrawTileGrid(SpriteBatch sb, Color color)
