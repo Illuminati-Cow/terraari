@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Terraria;
 using Terraria.DataStructures;
+using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
 using Terraria.Utilities;
@@ -11,6 +14,9 @@ namespace Terraari.Content.Projectiles;
 public class ShimmerLightning : ModProjectile
 {
     public override string Texture => $"{Mod.Name}/Content/Projectiles/{nameof(ShimmerLightning)}";
+    public override string GlowTexture =>
+        $"{Mod.Name}/Content/Projectiles/{nameof(ShimmerLightning)}_e";
+
     public float Timer
     {
         get => Projectile.ai[2];
@@ -21,17 +27,193 @@ public class ShimmerLightning : ModProjectile
     private const int MaxDirectionAttempts = 100; // Attempts before giving up and stopping
     private const float MinVerticalComponent = -0.02f; // Require Y <= this (mostly upward)
     private const float MaxLateralDisplacement = 40f; // Horizontal extent clamp
-
-    // Derived segment tick length (how long before changing direction)
-    private int SegmentTicks => Projectile.extraUpdates * 2;
-
-    private bool IsSegmentReady => Timer >= SegmentTicks;
+    private const int CollisionTrailLength = 20;
 
     private int seed = -1;
     private float xVelocityOffset;
     private bool FailedToBranch;
+    private readonly List<(Vector2 pos, float rot)> oldTransforms = new(100);
 
+    // Derived segment tick length (how long before changing direction)
+    private int SegmentTicks => Projectile.extraUpdates * 3;
+    private bool IsSegmentReady => Timer >= SegmentTicks;
     private float InitialDirection => Projectile.ai[0];
+
+    public override void SetStaticDefaults()
+    {
+        ProjectileID.Sets.TrailingMode[Projectile.type] = 2;
+        ProjectileID.Sets.TrailCacheLength[Projectile.type] = CollisionTrailLength;
+    }
+
+    public override void SetDefaults()
+    {
+        Projectile.DamageType = DamageClass.Magic;
+        Projectile.width = 14;
+        Projectile.height = 14;
+        Projectile.hostile = true;
+        Projectile.alpha = 255;
+        Projectile.ignoreWater = true;
+        Projectile.tileCollide = true;
+        Projectile.extraUpdates = 4;
+        Projectile.timeLeft = 240 * (Projectile.extraUpdates + 1);
+        Projectile.penetrate = 1;
+    }
+
+    public override void OnSpawn(IEntitySource source)
+    {
+        Timer = 0;
+    }
+
+    public override void AI()
+    {
+        if (seed == -1)
+            seed = (int)Projectile.ai[1];
+        Timer++;
+
+        if (Projectile.velocity == Vector2.Zero)
+        {
+            if (ShouldKillIfStationary())
+            {
+                Projectile.Kill();
+                return;
+            }
+            SpawnCollisionSparks();
+            SpawnCollisionSmoke();
+            return;
+        }
+        if (Projectile.shimmerWet)
+            Main.NewText("Shimmered lightning");
+        if (Projectile.owner == Main.myPlayer && Projectile.shimmerWet)
+        {
+            Projectile.NewProjectile(
+                Projectile.GetSource_FromAI(),
+                Projectile.Center,
+                -Vector2.UnitY,
+                ModContent.ProjectileType<BigBubble>(),
+                50,
+                4.5f,
+                Projectile.owner
+            );
+            Projectile.Kill();
+            return;
+        }
+
+        if (Timer % Projectile.extraUpdates == 0)
+        {
+            if (Projectile.oldPos.Length > 1)
+            {
+                oldTransforms.Add(new(Projectile.oldPos[0], Projectile.oldRot[0]));
+            }
+            if (oldTransforms.Count > 100)
+            {
+                oldTransforms.RemoveAt(0);
+            }
+        }
+
+        if (!IsSegmentReady)
+            return;
+
+        Timer = 0;
+        float speed = Projectile.velocity.Length();
+        if (!TryChooseNextDirection(speed, out Vector2 dir) || Projectile.velocity == Vector2.Zero)
+            return;
+        xVelocityOffset += dir.X * (Projectile.extraUpdates + 1) * 2f * speed;
+        Projectile.velocity = dir.RotatedBy(InitialDirection + MathF.PI / 2f) * speed;
+        Projectile.rotation = Projectile.velocity.ToRotation() + MathF.PI / 2f;
+    }
+
+    public override bool? Colliding(Rectangle projHitbox, Rectangle targetHitbox)
+    {
+        for (
+            int n = 0;
+            n < Projectile.oldPos.Length
+                && (Projectile.oldPos[n].X != 0f || Projectile.oldPos[n].Y != 0f);
+            n++
+        )
+        {
+            projHitbox.X = (int)Projectile.oldPos[n].X;
+            projHitbox.Y = (int)Projectile.oldPos[n].Y;
+            if (projHitbox.Intersects(targetHitbox))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Allows you to determine what happens when this projectile collides with a tile. OldVelocity is the velocity before tile collision. The velocity that takes tile collision into account can be found with Projectile.velocity. Return true to allow the vanilla tile collision code to take place (which normally kills the projectile). Returns true by default.
+    /// <para /> Called on local, server, and remote clients.
+    /// </summary>
+    /// <param name="oldVelocity">The velocity of the projectile upon collision.</param>
+    public override bool OnTileCollide(Vector2 oldVelocity)
+    {
+        // Despawn the projectile on tile collision only if it failed to branch
+        if (FailedToBranch)
+            return true;
+        Projectile.position += Projectile.velocity;
+        Projectile.velocity = Vector2.Zero;
+
+        return false;
+    }
+
+    public override void OnKill(int timeLeft)
+    {
+        if (timeLeft != 0)
+            return;
+        for (int i = 0; i < 4; i++)
+        {
+            SpawnCollisionSparks(true);
+        }
+    }
+
+    public override bool PreDraw(ref Color lightColor)
+    {
+        Texture2D insideTexture = TextureAssets.Projectile[Projectile.type].Value;
+        Texture2D outsideTexture = ModContent.Request<Texture2D>(GlowTexture).Value;
+        float size = 10f;
+        Main.spriteBatch.End();
+        Main.spriteBatch.Begin(
+            SpriteSortMode.Deferred,
+            BlendState.AlphaBlend,
+            SamplerState.PointClamp,
+            DepthStencilState.Default,
+            RasterizerState.CullNone,
+            null,
+            Main.GameViewMatrix.TransformationMatrix
+        );
+        int age = 1;
+        foreach ((Vector2 pos, float rot) in oldTransforms)
+        {
+            Rectangle frame = new(
+                (int)(pos.X - Main.screenPosition.X - size / 2),
+                (int)(pos.Y - Main.screenPosition.Y - size / 2),
+                (int)size,
+                (int)size
+            );
+            int trailLength = CollisionTrailLength / Projectile.extraUpdates;
+            float alpha = Utils.Remap(
+                age,
+                oldTransforms.Count - trailLength * 10f,
+                oldTransforms.Count,
+                0,
+                1
+            );
+            Main.spriteBatch.Draw(
+                outsideTexture,
+                frame,
+                null,
+                Main.quickAlpha(Color.White, alpha / 2)
+            );
+            alpha = Utils.Remap(age, oldTransforms.Count - trailLength, oldTransforms.Count, 0, 1);
+            Main.spriteBatch.Draw(outsideTexture, frame, null, Main.quickAlpha(Color.White, alpha));
+            Main.spriteBatch.Draw(insideTexture, frame, null, Main.quickAlpha(Color.White, alpha));
+            age++;
+        }
+        Main.spriteBatch.End();
+        Main.spriteBatch.Begin();
+        return false;
+    }
 
     private void SpawnCoreDust()
     {
@@ -138,129 +320,5 @@ public class ShimmerLightning : ModProjectile
         FailedToBranch = true;
         Projectile.netUpdate = true;
         return false;
-    }
-
-    public override void SetStaticDefaults()
-    {
-        ProjectileID.Sets.TrailingMode[Projectile.type] = 0;
-        ProjectileID.Sets.TrailCacheLength[Projectile.type] = 20;
-    }
-
-    public override void SetDefaults()
-    {
-        Projectile.DamageType = DamageClass.Magic;
-        Projectile.width = 14;
-        Projectile.height = 14;
-        Projectile.hostile = true;
-        Projectile.alpha = 255;
-        Projectile.ignoreWater = true;
-        Projectile.tileCollide = true;
-        Projectile.extraUpdates = 4;
-        Projectile.timeLeft = 240 * (Projectile.extraUpdates + 1);
-        Projectile.penetrate = 1;
-    }
-
-    public override void OnSpawn(IEntitySource source)
-    {
-        Timer = 0;
-    }
-
-    public override void AI()
-    {
-        if (seed == -1)
-            seed = (int)Projectile.ai[1];
-        Timer++;
-        if (Timer % 2 == 0)
-            SpawnCoreDust();
-
-        if (Projectile.velocity == Vector2.Zero)
-        {
-            if (ShouldKillIfStationary())
-            {
-                Projectile.Kill();
-                return;
-            }
-            SpawnCollisionSparks();
-            SpawnCollisionSmoke();
-            return;
-        }
-
-        if (!IsSegmentReady)
-            return;
-
-        Timer = 0;
-        float speed = Projectile.velocity.Length();
-        if (!TryChooseNextDirection(speed, out Vector2 dir) || Projectile.velocity == Vector2.Zero)
-            return;
-        xVelocityOffset += dir.X * (Projectile.extraUpdates + 1) * 2f * speed;
-        Projectile.velocity = dir.RotatedBy(InitialDirection + MathF.PI / 2f) * speed;
-        Projectile.rotation = Projectile.velocity.ToRotation() + MathF.PI / 2f;
-    }
-
-    public override bool? Colliding(Rectangle projHitbox, Rectangle targetHitbox)
-    {
-        for (
-            int n = 0;
-            n < Projectile.oldPos.Length
-                && (Projectile.oldPos[n].X != 0f || Projectile.oldPos[n].Y != 0f);
-            n++
-        )
-        {
-            projHitbox.X = (int)Projectile.oldPos[n].X;
-            projHitbox.Y = (int)Projectile.oldPos[n].Y;
-            if (projHitbox.Intersects(targetHitbox))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// Allows you to determine what happens when this projectile collides with a tile. OldVelocity is the velocity before tile collision. The velocity that takes tile collision into account can be found with Projectile.velocity. Return true to allow the vanilla tile collision code to take place (which normally kills the projectile). Returns true by default.
-    /// <para /> Called on local, server, and remote clients.
-    /// </summary>
-    /// <param name="oldVelocity">The velocity of the projectile upon collision.</param>
-    public override bool OnTileCollide(Vector2 oldVelocity)
-    {
-        // Despawn the projectile on tile collision only if it failed to branch
-        if (FailedToBranch)
-            return true;
-        Projectile.position += Projectile.velocity;
-        Projectile.velocity = Vector2.Zero;
-
-        return false;
-    }
-
-    public override void PostAI()
-    {
-        if (Projectile.velocity != Vector2.Zero)
-            return;
-        float angle =
-            Projectile.rotation
-            + (float)Math.PI / 2f
-            + (Main.rand.NextBool(2) ? -1f : 1f) * ((float)Math.PI / 2f);
-        float speed = (float)Main.rand.NextDouble() * 2f + 2f;
-        var velocity = new Vector2((float)Math.Cos(angle) * speed, (float)Math.Sin(angle) * speed);
-        var dust = Dust.NewDustDirect(
-            Projectile.oldPos[^1],
-            0,
-            0,
-            DustID.ShimmerSplash,
-            velocity.X,
-            velocity.Y
-        );
-        dust.noGravity = true;
-        dust.scale = 1.7f;
-    }
-
-    public override void OnKill(int timeLeft)
-    {
-        if (timeLeft != 0)
-            return;
-        for (int i = 0; i < 4; i++)
-        {
-            SpawnCollisionSparks(true);
-        }
     }
 }
