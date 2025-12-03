@@ -47,7 +47,7 @@ float4 ArmorBasic(float4 sampleColor : COLOR0, float2 coords : TEXCOORD0) : COLO
     int c2 = currentSection+1.0;
     if (c2 == COLOR_COUNT) c2 = 0;
     float3 color = lerp(colors[c1], colors[c2], sectionProgress);
-    return float4(color, 1.0);
+    return float4(color, colorSample.a);
 } 
      
 technique Technique1 
