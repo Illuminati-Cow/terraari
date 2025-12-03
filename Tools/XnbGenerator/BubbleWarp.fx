@@ -14,10 +14,20 @@ float4 lerp(float4 a, float4 b, float t) {
     return a + (b - a) * t;
 }
 
+bool isGreen(float4 c) {
+    return c.r < 0.05 && c.g > 0.7 && c.b < 0.05;
+}
+
 float4 ArmorBasic(float4 sampleColor : COLOR0, float2 coords : TEXCOORD0) : COLOR0 { 
     // Get specific index
     // Get position within index
     // Set color to lerp
+
+    float4 colorSample = tex2D(uImage0, coords);
+
+    if (!isGreen(colorSample)) {
+        return colorSample;
+    }
 
     float gradientScale = 3.0;
     float gradientSpeed = 1.0/3.0;
