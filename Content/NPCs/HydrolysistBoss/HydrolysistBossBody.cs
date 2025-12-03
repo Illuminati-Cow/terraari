@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Terraari.Common.StateMachine;
 using Terraari.Common.Systems;
 using Terraari.Content.Buffs;
@@ -8,6 +9,7 @@ using Terraari.Content.Projectiles;
 using Terraria;
 using Terraria.Audio;
 using Terraria.DataStructures;
+using Terraria.GameContent;
 using Terraria.GameContent.ItemDropRules;
 using Terraria.Graphics.CameraModifiers;
 using Terraria.ID;
@@ -36,6 +38,9 @@ public class HydrolysistBossBody : ModNPC
 
     public AnimationFrameData CurrentAnimation;
 
+    private const int TeleportTrailDuration = 60;
+    private int teleportTrailTimer;
+
     private void SyncState()
     {
         NPC.ai[0] = stateMachine.GetSerializedState();
@@ -44,7 +49,7 @@ public class HydrolysistBossBody : ModNPC
 
     private static void FaceHorizontallyTowards(NPC npc, Vector2 target)
     {
-        int dir = Math.Sign(target.X - npc.Center.X);
+        int dir = Math.Sign(npc.Center.X - target.X);
         if (dir != 0)
         {
             npc.direction = npc.spriteDirection = dir;
@@ -82,6 +87,9 @@ public class HydrolysistBossBody : ModNPC
         NPCID.Sets.MPAllowedEnemies[Type] = true;
         // NPCID.Sets.TrailingMode[Type] = 0;
         NPCID.Sets.ImmuneToRegularBuffs[Type] = true;
+
+        NPCID.Sets.TrailCacheLength[Type] = 20;   // how many old positions we store
+        NPCID.Sets.TrailingMode[Type] = 3;  //afterimage style
     }
 
     public override void SetDefaults()
@@ -108,6 +116,66 @@ public class HydrolysistBossBody : ModNPC
         NPC.netAlways = true;
         NPC.SpawnWithHigherTime(30);
     }
+
+    public override bool PreDraw(SpriteBatch spriteBatch, Vector2 screenPos, Color drawColor)
+    {
+        Texture2D texture = TextureAssets.Npc[NPC.type].Value;
+        Rectangle frame = NPC.frame;
+        Vector2 origin = frame.Size() / 2f;
+        SpriteEffects effects = NPC.spriteDirection == 1
+            ? SpriteEffects.None
+            : SpriteEffects.FlipHorizontally;
+
+        // Draw the trail / afterimages
+        if (teleportTrailTimer > 0 && NPC.oldPos != null && NPC.oldPos.Length > 0)
+        {
+            // How strong the whole trail should be this frame 
+            float trailStrength = teleportTrailTimer / (float)TeleportTrailDuration;
+
+            for (int i = 0; i < NPC.oldPos.Length; i++)
+            {
+                // t goes from 1 (near the boss) to ~0 (back towards the start)
+                float t = (NPC.oldPos.Length - i) / (float)NPC.oldPos.Length;
+
+                // Stronger alpha near the “newer” positions, scaled by trailStrength
+                float alpha = 0.75f * t * trailStrength;
+                Color afterimageColor = Color.White * alpha;
+
+                Vector2 drawPos =
+                    NPC.oldPos[i] + NPC.Size / 2f - screenPos + new Vector2(0f, NPC.gfxOffY);
+
+                spriteBatch.Draw(
+                    texture,
+                    drawPos,
+                    frame,
+                    afterimageColor,
+                    NPC.rotation,
+                    origin,
+                    NPC.scale,
+                    effects,
+                    0f
+                );
+                
+            }
+        }
+
+
+        Vector2 mainPos = NPC.Center - screenPos + new Vector2(0f, NPC.gfxOffY);
+        spriteBatch.Draw(
+            texture,
+            mainPos,
+            frame,
+            drawColor,
+            NPC.rotation,
+            origin,
+            NPC.scale,
+            effects,
+            0f
+        );
+
+        return false;
+    }
+
 
     public override void OnSpawn(IEntitySource source)
     {
@@ -342,6 +410,9 @@ public class HydrolysistBossBody : ModNPC
         }
         var context = new HydrolysistContext { Boss = this, Target = player };
         stateMachine.Tick(context);
+        if (teleportTrailTimer > 0)
+            teleportTrailTimer--;
+
         if (stateMachine.CurrentState is not TransformationState)
             Lighting.AddLight(center, Color.Pink.ToVector3() * 0.75f);
     }
@@ -816,39 +887,188 @@ public class HydrolysistBossBody : ModNPC
     }
 
     private class MovementState : IState<HydrolysistContext>
+{
+    // Time the boss spends "charging" before disappearing
+    private const int TELEGRAPH_TIME = 30;
+    // Time after reappearing before going back to idle / attacks
+    private const int RECOVER_TIME = 20;
+
+    private static readonly AnimationFrameData teleportOutAnimation = new(5, new[] { 4, 5, 6 });
+    private static readonly AnimationFrameData teleportInAnimation  = new(5, new[] { 7, 8, 9 });
+
+    public List<Transition<HydrolysistContext>> Transitions { get; set; }
+
+    private bool hasTeleported;
+
+    public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
     {
-        private const float MOVE_TIME = 1f; // TEMP SKIP VALUE
-        private static readonly AnimationFrameData moveAnimation = new(10, [4, 5, 6]);
-        public List<Transition<HydrolysistContext>> Transitions { get; set; }
-        private Vector2 location;
+        hasTeleported = false;
 
-        public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
+        context.Boss.Timer = TELEGRAPH_TIME;
+        context.Boss.Phase = 0f; // will be set to >0 when teleport is done
+        context.Boss.CurrentAnimation = teleportOutAnimation;
+
+        // briefly invulnerable / un-targetable during warp
+        context.Boss.NPC.dontTakeDamage = true;
+        context.Boss.NPC.chaseable = false;
+        context.Boss.NPC.velocity = Vector2.Zero;
+        context.Boss.NPC.netUpdate = true;
+    }
+
+    public void Exit(IState<HydrolysistContext> to, HydrolysistContext context)
+    {
+        context.Boss.NPC.dontTakeDamage = false;
+        context.Boss.NPC.chaseable = true;
+        context.Boss.NPC.velocity = Vector2.Zero;
+        context.Boss.NPC.netUpdate = true;
+    }
+
+    public void Tick(HydrolysistContext context)
+    {
+        context.Boss.Timer--;
+
+        if (!hasTeleported && context.Boss.Timer <= 0)
         {
-            context.Boss.Timer = MOVE_TIME;
-            context.Boss.Phase = 0f;
-            context.Boss.CurrentAnimation = moveAnimation;
-            context.Boss.NPC.dontTakeDamage = true;
+            DoTeleport(context);                         // actually warp
+            hasTeleported = true;
+
+            context.Boss.CurrentAnimation = teleportInAnimation;
+            context.Boss.Timer = RECOVER_TIME;
+
+            context.Boss.Phase = 1f;
             context.Boss.NPC.netUpdate = true;
-            if (Main.netMode == NetmodeID.MultiplayerClient)
-                return;
-        }
-
-        public void Exit(IState<HydrolysistContext> to, HydrolysistContext context)
-        {
-            context.Boss.NPC.velocity.Y = 0f;
-            context.Boss.NPC.dontTakeDamage = false;
-            context.Boss.NPC.netUpdate = true;
-        }
-
-        public void Tick(HydrolysistContext context)
-        {
-            context.Boss.Timer -= 1f;
-            if (context.Boss.Timer <= 0)
-            {
-                context.Boss.Phase++;
-            }
         }
     }
+
+    private void DoTeleport(HydrolysistContext context)
+    {
+        NPC npc = context.Boss.NPC;
+        Player target = context.Target ?? Main.player[npc.target];
+        if (target == null || !target.active)
+            return;
+
+        //before teleport
+        Vector2 oldCenter = npc.Center;
+
+        SpawnTeleportDust(oldCenter);
+
+        //find new position around player
+        Vector2 newCenter = FindTeleportDestination(npc, target);
+
+        if (npc.oldPos != null && npc.oldPos.Length > 0)
+        {
+            int len = npc.oldPos.Length;
+
+            for (int i = 0; i < len; i++)
+            {
+                // t goes 0 → 1 along the path
+                float t = i / (float)(len - 1);
+
+                // Interpolate between centers
+                Vector2 lerpCenter = Vector2.Lerp(oldCenter, newCenter, t);
+
+                // oldPos is top-left, so subtract half the size
+                npc.oldPos[i] = lerpCenter - npc.Size / 2f;
+            }
+        }
+
+        context.Boss.teleportTrailTimer = TeleportTrailDuration;
+
+        // Only the server actually moves the NPC
+        if (Main.netMode != NetmodeID.MultiplayerClient)
+        {
+            npc.Center = newCenter;
+            FaceHorizontallyTowards(npc, target.Center);
+            npc.netUpdate = true;
+        }
+
+        // Burst of dust at the new location
+        SpawnTeleportDust(newCenter);
+    }
+
+
+
+    private static void SpawnTeleportDust(Vector2 center)
+    {
+        for (int i = 0; i < 25; i++)
+        {
+            Vector2 speed = Main.rand.NextVector2Circular(4f, 4f);
+            int d = Dust.NewDust(
+                center - new Vector2(16f, 16f),
+                32,
+                32,
+                DustID.ShimmerSpark, 
+                speed.X,
+                speed.Y,
+                150,
+                default,
+                1.6f
+            );
+            Main.dust[d].noGravity = true;
+        }
+
+        for (int i = 0; i < 15; i++)
+        {
+            Vector2 speed = Main.rand.NextVector2Circular(2f, 2f);
+            int d = Dust.NewDust(
+                center - new Vector2(24f, 24f),
+                48,
+                48,
+                DustID.PinkTorch,
+                speed.X,
+                speed.Y,
+                200,
+                default,
+                1.1f
+            );
+            Main.dust[d].noGravity = true;
+        }
+    }
+
+    private static Vector2 FindTeleportDestination(NPC npc, Player target)
+    {
+        const int attempts = 30;
+        const float minRadius = 250f;
+        const float maxRadius = 450f;
+
+        for (int i = 0; i < attempts; i++)
+        {
+            // Random angle around the player
+            float angle = MathHelper.ToRadians(Main.rand.Next(360));
+            float radius = Main.rand.NextFloat(minRadius, maxRadius);
+
+            Vector2 offset = angle.ToRotationVector2() * radius;
+            Vector2 candidateCenter = target.Center + offset;
+
+            // Don't go too far off-screen or outside world
+            candidateCenter.X = MathHelper.Clamp(
+                candidateCenter.X,
+                200f,
+                Main.maxTilesX * 16f - 200f
+            );
+            candidateCenter.Y = MathHelper.Clamp(
+                candidateCenter.Y,
+                200f,
+                Main.maxTilesY * 16f - 200f
+            );
+
+            
+            Rectangle hitbox = new Rectangle(
+                (int)(candidateCenter.X - npc.width / 2),
+                (int)(candidateCenter.Y - npc.height / 2),
+                npc.width,
+                npc.height
+            );
+
+            if (!Collision.SolidCollision(hitbox.Location.ToVector2(), hitbox.Width, hitbox.Height))
+                return candidateCenter;
+        }
+
+        // If all else fails stay where we are
+        return npc.Center;
+    }
+}
+
 
     //#region Cultist Code
     private static List<int> GetLinkedClones(int leaderWhoAmI)
