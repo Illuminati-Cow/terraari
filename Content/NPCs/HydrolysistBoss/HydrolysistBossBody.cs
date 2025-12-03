@@ -16,6 +16,7 @@ using Terraria.ID;
 using Terraria.ModLoader;
 using AnimationFrameData = Terraria.Animation.AnimationFrameData;
 using ShimmerHelper = Terraari.Common.Helpers.ShimmerHelper;
+using ShaderHelper = Terraari.Common.Helpers.ShaderHelper;
 
 namespace terraari.Content.NPCs.HydrolysistBoss;
 
@@ -23,6 +24,7 @@ namespace terraari.Content.NPCs.HydrolysistBoss;
 public class HydrolysistBossBody : ModNPC
 {
     private StateMachine<HydrolysistContext> stateMachine;
+    private Effect shader;
 
     public float Timer
     {
@@ -115,6 +117,8 @@ public class HydrolysistBossBody : ModNPC
         NPC.boss = true;
         NPC.netAlways = true;
         NPC.SpawnWithHigherTime(30);
+
+        shader = ShaderHelper.SetUpShimmerShader();
     }
 
     public override bool PreDraw(SpriteBatch spriteBatch, Vector2 screenPos, Color drawColor)
@@ -143,7 +147,8 @@ public class HydrolysistBossBody : ModNPC
                 Vector2 drawPos =
                     NPC.oldPos[i] + NPC.Size / 2f - screenPos + new Vector2(0f, NPC.gfxOffY);
 
-                spriteBatch.Draw(
+                ShaderHelper.DrawShimmerShader(
+                    shader,
                     texture,
                     drawPos,
                     frame,
@@ -158,17 +163,7 @@ public class HydrolysistBossBody : ModNPC
         }
 
         Vector2 mainPos = NPC.Center - screenPos + new Vector2(0f, NPC.gfxOffY);
-        spriteBatch.Draw(
-            texture,
-            mainPos,
-            frame,
-            drawColor,
-            NPC.rotation,
-            origin,
-            NPC.scale,
-            effects,
-            0f
-        );
+        ShaderHelper.DrawShimmerShader(shader, texture, mainPos, frame, drawColor, NPC.rotation, origin, NPC.scale, effects, 0f);
 
         return false;
     }

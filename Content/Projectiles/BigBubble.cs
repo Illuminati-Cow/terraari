@@ -1,20 +1,17 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using ReLogic.Content;
 using Terraria;
 using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
+using ShaderHelper = Terraari.Common.Helpers.ShaderHelper;
 
 namespace Terraari.Content.Projectiles;
 
 public class BigBubble : ModProjectile
 {
-    private static Effect bubbleEffect;
-    private static Texture2D circleTexture;
-
-    public override string Texture => "Terraria/Images/Projectile_0"; // We will use no texture
+    private Effect shader;
 
     private Player HomingTarget
     {
@@ -29,15 +26,6 @@ public class BigBubble : ModProjectile
     }
 
     public ref float DelayTimer => ref Projectile.ai[1];
-
-    public override void Load()
-    {
-        if (Main.dedServ)
-            return;
-        bubbleEffect = ModContent
-            .Request<Effect>("terraari/Assets/Effects/BubbleWarp", AssetRequestMode.ImmediateLoad)
-            .Value;
-    }
 
     public override void SetStaticDefaults()
     {
@@ -58,6 +46,8 @@ public class BigBubble : ModProjectile
         Projectile.ignoreWater = true; // Does the projectile ignore water (doesn't slow down in it)
         Projectile.tileCollide = false; // Does the projectile collide with tiles, like blocks?
         Projectile.alpha = 255; // Completely transparent
+
+        shader = ShaderHelper.SetUpShimmerShader();
     }
 
     public override void OnSpawn(IEntitySource source)
@@ -65,100 +55,16 @@ public class BigBubble : ModProjectile
         HomingTarget = null; // Reset homing target
     }
 
-    public void GenerateCircleTexture()
-    {
-        // Create circle texture on first use (lazy initialization)
-        if (circleTexture == null)
-        {
-            int size = 64;
-            Color[] colorData = new Color[size * size];
-            Vector2 center = new Vector2(size / 2f, size / 2f);
+    public override bool PreDraw(ref Color lightColor) {
+        Texture2D texture = ModContent.Request<Texture2D>(Texture).Value;
+        Rectangle frame = new(0, 0, texture.Width, texture.Height);
+        Vector2 origin = texture.Size() / 2f;
+        Vector2 mainPos = Projectile.Center - Main.screenPosition;
+        
+        ShaderHelper.DrawShimmerShader(shader, texture, mainPos, frame, Color.White, Projectile.rotation, origin, Projectile.scale, SpriteEffects.None, 0);
 
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    Vector2 pos = new Vector2(x, y);
-                    float dist = Vector2.Distance(pos, center);
-
-                    if (dist <= size / 2f)
-                        colorData[y * size + x] = Color.White;
-                    else
-                        colorData[y * size + x] = Color.Transparent;
-                }
-            }
-
-            circleTexture = new Texture2D(Main.graphics.GraphicsDevice, size, size);
-            circleTexture.SetData(colorData);
-        }
-    }
-
-    public override void PostDraw(Color lightColor)
-    {
-        if (Main.dedServ || bubbleEffect == null)
-            return;
-
-        GenerateCircleTexture();
-
-        // Capture current screen as texture for warping
-        var screenTarget = Main.screenTarget;
-
-        // Set shader params
-        bubbleEffect.Parameters["uTime"]?.SetValue(Main.GlobalTimeWrappedHourly);
-        bubbleEffect.Parameters["uImageScreen"]?.SetValue(screenTarget);
-
-        // Apply shader
-        Main.spriteBatch.End();
-        Main.spriteBatch.Begin(
-            SpriteSortMode.Immediate,
-            BlendState.NonPremultiplied,
-            SamplerState.LinearClamp,
-            DepthStencilState.Default,
-            RasterizerState.CullNone,
-            bubbleEffect,
-            Main.GameViewMatrix.TransformationMatrix
-        );
-
-        float size = 50f;
-        Main.spriteBatch.Draw(
-            circleTexture,
-            new Rectangle(
-                (int)(Projectile.Center.X - Main.screenPosition.X - size / 2),
-                (int)(Projectile.Center.Y - Main.screenPosition.Y - size / 2),
-                (int)size,
-                (int)size
-            ),
-            null,
-            Color.White
-        );
-
-        Main.spriteBatch.End();
-        Main.spriteBatch.Begin(
-            SpriteSortMode.Deferred,
-            BlendState.AlphaBlend,
-            SamplerState.LinearClamp,
-            DepthStencilState.Default,
-            RasterizerState.CullNone,
-            null,
-            Main.GameViewMatrix.TransformationMatrix
-        );
-    }
-
-    public override void Unload()
-    {
-        bubbleEffect = null;
-        if (!Main.dedServ)
-        {
-            try
-            {
-                circleTexture?.Dispose();
-            }
-            catch (Exception _)
-            {
-                // do not allow exception in unload, else game will crash
-            }
-        }
-        circleTexture = null;
+        // Return false to prevent default drawing
+        return false;
     }
 
     public override void AI()
