@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using ReLogic.Content;
 using Terraria;
+using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
 
@@ -17,8 +18,8 @@ public class BigBubble : ModProjectile
 
     private Player HomingTarget
     {
-        get => Projectile.ai[0] == 0 ? null : Main.player[(int)Projectile.ai[0]];
-        set => Projectile.ai[0] = value?.whoAmI ?? 0;
+        get => Projectile.ai[0] < 0 ? null : Main.player[(int)Projectile.ai[0]];
+        set => Projectile.ai[0] = value?.whoAmI ?? -1;
     }
 
     private bool ShouldSpawnBubbles
@@ -47,7 +48,7 @@ public class BigBubble : ModProjectile
     {
         Projectile.DamageType = DamageClass.Magic; // Damage class projectile uses
         Projectile.scale = 1f; // Projectile scale multiplier
-        Projectile.penetrate = 3; // How many hits projectile have to make before it dies. 3 means projectile will die on 3rd enemy. Setting this to 0 will make projectile die instantly
+        Projectile.penetrate = 1; // How many hits projectile have to make before it dies. 3 means projectile will die on 3rd enemy. Setting this to 0 will make projectile die instantly
         Projectile.aiStyle = 0; // AI style of a projectile. 0 is default bullet AI
         Projectile.width = Projectile.height = 10; // Hitbox of projectile in pixels
         Projectile.friendly = false; // Can hit enemies?
@@ -57,6 +58,11 @@ public class BigBubble : ModProjectile
         Projectile.ignoreWater = true; // Does the projectile ignore water (doesn't slow down in it)
         Projectile.tileCollide = false; // Does the projectile collide with tiles, like blocks?
         Projectile.alpha = 255; // Completely transparent
+    }
+
+    public override void OnSpawn(IEntitySource source)
+    {
+        HomingTarget = null; // Reset homing target
     }
 
     public void GenerateCircleTexture()
@@ -207,23 +213,25 @@ public class BigBubble : ModProjectile
         Projectile.velocity =
             Projectile
                 .velocity.ToRotation()
-                .AngleTowards(targetAngle, MathHelper.ToRadians(20))
+                .AngleTowards(targetAngle, MathHelper.ToRadians(0.5f))
                 .ToRotationVector2() * length;
     }
 
     public Player FindClosestPlayer(float maxDetectDistance)
     {
         Player closestPlayer = null;
-        // Using squared values in distance checks will let us skip square root calculations, drastically improving this method's speed.
-        float sqrMaxDetectDistance = maxDetectDistance * maxDetectDistance;
+        float closestDistanceSquared = maxDetectDistance * maxDetectDistance;
 
         foreach (Player target in Main.ActivePlayers)
         {
             if (
                 closestPlayer == null
-                || (target.Center - Projectile.Center).LengthSquared() < sqrMaxDetectDistance
+                || (target.Center - Projectile.Center).LengthSquared() < closestDistanceSquared
             )
+            {
                 closestPlayer = target;
+                closestDistanceSquared = (target.Center - Projectile.Center).LengthSquared();
+            }
         }
 
         return closestPlayer;
