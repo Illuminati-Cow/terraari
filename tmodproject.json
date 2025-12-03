@@ -1,6 +1,7 @@
 {
   "rootNamespace": "terraari",
   "fileMap": {
-    "Content\\Projectiles\\Bubble.cs": "terraari.Content.Projectiles"
+    "Content\\Projectiles\\Bubble.cs": "terraari.Content.Projectiles",
+    "Common\\Helpers\\ShaderHelper.cs": "terraari.Common.Helpers"
   }
 }
