@@ -1,6 +1,6 @@
 using Mono.CompilerServices.SymbolWriter;
-using terraari.Content.NPCs.HydrolysistBoss;
 using Terraari.Common.Systems;
+using terraari.Content.NPCs.HydrolysistBoss;
 using Terraria;
 using Terraria.Audio;
 using Terraria.GameContent;

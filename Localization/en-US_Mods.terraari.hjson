@@ -36,6 +36,7 @@ Projectiles: {
 	BigBubble.DisplayName: Big Bubble
 	ShimmerLightning.DisplayName: Shimmer Lightning
 	SmallBubble.DisplayName: Small Bubble
+	HydrolysistTeleportLine.DisplayName: Hydrolysist Teleport Line
 }
 
 Keybinds: {
