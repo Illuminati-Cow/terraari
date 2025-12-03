@@ -74,7 +74,7 @@ public class HydrolysistBossBody : ModNPC
     public override void SetStaticDefaults()
     {
         // Adjust to match the frames of the spritesheet
-        Main.npcFrameCount[NPC.type] = 16;
+        Main.npcFrameCount[NPC.type] = 13;
         // Add boss to the bestiary
         // NPCID.Sets.BossBestiaryPriority.Add(Type);
         // NPCID.Sets.NPCBestiaryDrawModifiers value = new()
@@ -523,12 +523,14 @@ public class HydrolysistBossBody : ModNPC
     {
         private const float DECISION_TIME = 60f;
         private int phaseTracker = 0;
+        private readonly AnimationFrameData IdleAnimation = new(10, [4, 5, 6]);
         public List<Transition<HydrolysistContext>> Transitions { get; set; } = [];
 
         public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
         {
             context.Boss.Timer = DECISION_TIME;
             context.Boss.Phase = 0f;
+            context.Boss.CurrentAnimation = IdleAnimation;
         }
 
         public void Exit(IState<HydrolysistContext> to, HydrolysistContext context)
@@ -549,7 +551,7 @@ public class HydrolysistBossBody : ModNPC
     private class TransformationState : IState<HydrolysistContext>
     {
         private const float TRANSFORMATION_TIME = 240f;
-        private static readonly AnimationFrameData StartAnimation = new(3, [1, 2, 3]);
+        private static readonly AnimationFrameData StartAnimation = new(3, [0, 3, 2]);
         private static readonly AnimationFrameData FloatAnimation = new(10, [7, 8, 9]);
         public List<Transition<HydrolysistContext>> Transitions { get; set; } = [];
 
@@ -605,7 +607,7 @@ public class HydrolysistBossBody : ModNPC
         private const float ATTACK_TIME = 300f;
         private const float RECOVER_TIME = 60f;
         private const int FIRE_INTERVAL = 15;
-        private static readonly AnimationFrameData chargeAnimation = new(10, [13, 14, 15]);
+        private static readonly AnimationFrameData chargeAnimation = new(10, [7, 8, 9]);
         private static readonly AnimationFrameData fireAnimation = new(10, [10, 11, 12]);
         private static readonly AnimationFrameData recoverAnimation = new(10, [3, 4, 5, 6]);
         public List<Transition<HydrolysistContext>> Transitions { get; set; }
@@ -712,7 +714,7 @@ public class HydrolysistBossBody : ModNPC
         private const int FIRE_INTERVAL = 5;
         private const float BUBBLE_SPEED = 8f;
         private static int BUBBLE_DAMAGE;
-        private static readonly AnimationFrameData chargeAnimation = new(10, [13, 14, 15]);
+        private static readonly AnimationFrameData chargeAnimation = new(10, [7, 8, 9]);
         private static readonly AnimationFrameData fireAnimation = new(10, [10, 11, 12]);
 
         public List<Transition<HydrolysistContext>> Transitions { get; set; }
@@ -808,7 +810,7 @@ public class HydrolysistBossBody : ModNPC
     {
         private const float CHARGE_TIME = 60f;
         private const float BUBBLE_SPEED = 5f;
-        private static readonly AnimationFrameData chargeAnimation = new(10, [13, 14, 15]);
+        private static readonly AnimationFrameData chargeAnimation = new(10, [7, 8, 9]);
         private static readonly AnimationFrameData fireAnimation = new(10, [10, 11, 12]);
         public List<Transition<HydrolysistContext>> Transitions { get; set; }
 
@@ -888,8 +890,8 @@ public class HydrolysistBossBody : ModNPC
         // Time after reappearing before going back to idle / attacks
         private const int RECOVER_TIME = 20;
 
-        private static readonly AnimationFrameData teleportOutAnimation = new(5, new[] { 4, 5, 6 });
-        private static readonly AnimationFrameData teleportInAnimation = new(5, new[] { 7, 8, 9 });
+        private static readonly AnimationFrameData teleportOutAnimation = new(5, [4, 5, 6]);
+        private static readonly AnimationFrameData teleportInAnimation = new(5, [7, 8, 9]);
 
         public List<Transition<HydrolysistContext>> Transitions { get; set; }
 
