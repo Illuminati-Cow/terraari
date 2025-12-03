@@ -24,3 +24,29 @@ NPCs: {
 
 	HydrolysistBossBody.DisplayName: Hydrolysist Boss Body
 }
+
+Items: {
+	BubbleSword: {
+		DisplayName: Bubble Sword
+		Tooltip: ""
+	}
+}
+
+Projectiles: {
+	BigBubble.DisplayName: Big Bubble
+	ShimmerLightning.DisplayName: Shimmer Lightning
+	SmallBubble.DisplayName: Small Bubble
+}
+
+Keybinds: {
+	"Toggle Debug Overlay.DisplayName": Toggle  Debug  Overlay
+	"Toggle Tile Grid.DisplayName": Toggle  Tile  Grid
+	"Clear Debug Drawings.DisplayName": Clear  Debug  Drawings
+}
+
+Buffs: {
+	ShimmerImmunityBuff: {
+		DisplayName: Shimmer Immunity Buff
+		Description: Mods.terraari.Buffs.ShimmerImmunityBuff.Description
+	}
+}

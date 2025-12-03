@@ -1,70 +1,45 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
+using Terraari.Common.StateMachine;
 using Terraari.Common.Systems;
+using Terraari.Content.Buffs;
+using Terraari.Content.Projectiles;
 using Terraria;
 using Terraria.Audio;
+using Terraria.DataStructures;
 using Terraria.GameContent.ItemDropRules;
-using Terraria.GameContent.RGB;
 using Terraria.Graphics.CameraModifiers;
 using Terraria.ID;
 using Terraria.ModLoader;
+using AnimationFrameData = Terraria.Animation.AnimationFrameData;
+using ShimmerHelper = Terraari.Common.Helpers.ShimmerHelper;
 
-namespace Terraari.Content.NPCs.HydrolysistBoss;
+namespace terraari.Content.NPCs.HydrolysistBoss;
 
 [AutoloadBossHead]
 public class HydrolysistBossBody : ModNPC
 {
-    // High-level AI overview
-    // ai[0] = State machine selector (see AiState)
-    // ai[1] = State-local timer (ticks)
-    // ai[2] = Projectile id for ritual/anchor projectiles (when used)
-    // ai[3] = Pattern index/phase counter OR link to leader (vanilla Cultist), context-dependent
-    // localAI[0] = One-time spawn init flag
-    // localAI[1] = Clone group id (vanilla Cultist behavior)
-    // localAI[2] = Pose/animation hint (10, 11, 12, 13 used by vanilla sprites)
+    private StateMachine<HydrolysistContext> stateMachine;
 
-    private enum AiState
+    public float Timer
     {
-        SpawnFadeIn = -1,
-        IdleDecision = 0,
-        MoveSequence = 1,
-        IceMistVolley = 2,
-        FireballBarrage = 3,
-        LightningOrbAndBolts = 4,
-        Ritual = 5,
-        TauntPause = 6,
-        AncientDoomFan = 7,
-        SummonAdds = 8,
+        get => NPC.ai[1];
+        set => NPC.ai[1] = value;
     }
 
-    // Constants extracted for readability (behavior unchanged)
-    private const float AggroRadius = 5600f;
-    private const float SpreadSmall = 0.5235987901687622f; // ~30 degrees
-    private const float SpreadLarge = 1.2566370964050293f; // ~72 degrees
-    private const float TwoPi = (float)Math.PI * 2f;
-    private const float RitualRingRadius = 180f;
-    private const int RitualFadeOutTicks = 30;
-    private const int RitualBetweenTicks = 60; // 30->90 window
-    private const int RitualActiveStart = 120;
-    private const int RitualActiveEnd = 420;
-
-    // Small helpers (no behavior changes)
-    private static List<int> GetLinkedClones(int leaderWhoAmI)
+    public float Phase
     {
-        List<int> cloneIndices = new List<int>();
-        for (int i = 0; i < 200; i++)
-        {
-            if (
-                Main.npc[i].active
-                && Main.npc[i].type == NPCID.CultistBossClone
-                && Main.npc[i].ai[3] == leaderWhoAmI
-            )
-            {
-                cloneIndices.Add(i);
-            }
-        }
-        return cloneIndices;
+        get => NPC.ai[2];
+        set => NPC.ai[2] = value;
+    }
+
+    public AnimationFrameData CurrentAnimation;
+
+    private void SyncState()
+    {
+        NPC.ai[0] = stateMachine.GetSerializedState();
+        NPC.netUpdate = true;
     }
 
     private static void FaceHorizontallyTowards(NPC npc, Vector2 target)
@@ -80,6 +55,15 @@ public class HydrolysistBossBody : ModNPC
     {
         // Preserves original behavior: only fixes NaNs, does not normalize unless caller does
         return v.HasNaNs() ? new Vector2(fallbackDirX, 0f) : v;
+    }
+
+    private void DebugPrint(string msg)
+    {
+        CombatText.NewText(
+            new Rectangle((int)NPC.position.X, (int)NPC.position.Y, 100, 100),
+            Color.White,
+            msg
+        );
     }
 
     public override void SetStaticDefaults()
@@ -125,6 +109,97 @@ public class HydrolysistBossBody : ModNPC
         NPC.SpawnWithHigherTime(30);
     }
 
+    public override void OnSpawn(IEntitySource source)
+    {
+        var transformationState = new TransformationState();
+        var idleState = new IdleState();
+        var lightningState = new LightningState();
+        var bubbleSwarmState = new BubbleSwarmState();
+        var giantBubbleState = new GiantBubbleState();
+        var movementState = new MovementState();
+
+        transformationState.Transitions =
+        [
+            new Transition<HydrolysistContext>
+            {
+                To = idleState,
+                Conditions = [new TransitionCondition { Predicate = () => Timer <= 0f }],
+            },
+        ];
+        idleState.Transitions =
+        [
+            new Transition<HydrolysistContext>()
+            {
+                To = lightningState,
+                Conditions =
+                [
+                    new TransitionCondition { Predicate = () => Timer <= 0 && Phase == 0f },
+                ],
+            },
+            new Transition<HydrolysistContext>()
+            {
+                To = bubbleSwarmState,
+                Conditions =
+                [
+                    new TransitionCondition { Predicate = () => Timer <= 0 && Phase == 1f },
+                ],
+            },
+            new Transition<HydrolysistContext>()
+            {
+                To = giantBubbleState,
+                Conditions =
+                [
+                    new TransitionCondition { Predicate = () => Timer <= 0 && Phase == 2f },
+                ],
+            },
+        ];
+        lightningState.Transitions =
+        [
+            new Transition<HydrolysistContext>()
+            {
+                To = movementState,
+                Conditions = [new TransitionCondition { Predicate = () => Phase >= 3f }],
+            },
+        ];
+        bubbleSwarmState.Transitions =
+        [
+            new Transition<HydrolysistContext>()
+            {
+                To = movementState,
+                Conditions = [new TransitionCondition { Predicate = () => Phase >= 2f }],
+            },
+        ];
+        giantBubbleState.Transitions =
+        [
+            new Transition<HydrolysistContext>()
+            {
+                To = movementState,
+                Conditions = [new TransitionCondition { Predicate = () => Phase >= 2f }],
+            },
+        ];
+        movementState.Transitions =
+        [
+            new Transition<HydrolysistContext>()
+            {
+                To = idleState,
+                Conditions = [new TransitionCondition { Predicate = () => Phase > 0f }],
+            },
+        ];
+
+        stateMachine = new StateMachine<HydrolysistContext>(
+            [
+                transformationState,
+                idleState,
+                lightningState,
+                bubbleSwarmState,
+                giantBubbleState,
+                movementState,
+            ],
+            new HydrolysistContext { Boss = this }
+        );
+        CurrentAnimation = new AnimationFrameData(1, [0]);
+    }
+
     public override bool CanHitPlayer(Player target, ref int cooldownSlot)
     {
         // use the boss immunity cooldown counter, to prevent ignoring boss attacks by taking damage from other sources
@@ -134,22 +209,15 @@ public class HydrolysistBossBody : ModNPC
 
     public override void FindFrame(int frameHeight)
     {
-        // This NPC animates with a simple "go from start frame to final frame, and loop back to start frame" rule
-        int startFrame = 3;
-        int finalFrame = 6;
-
-        int frameSpeed = 5;
         NPC.frameCounter += 0.5f;
-        if (NPC.frameCounter > frameSpeed)
+        int index = (int)(NPC.frameCounter / CurrentAnimation.frameRate);
+        if ((int)(NPC.frameCounter / CurrentAnimation.frameRate) >= CurrentAnimation.frames.Length)
         {
             NPC.frameCounter = 0;
-            NPC.frame.Y += frameHeight;
-
-            if (NPC.frame.Y > finalFrame * frameHeight)
-            {
-                NPC.frame.Y = startFrame * frameHeight;
-            }
         }
+        NPC.frame.Y =
+            CurrentAnimation.frames[(int)(NPC.frameCounter / CurrentAnimation.frameRate)]
+            * frameHeight;
     }
 
     public override void HitEffect(NPC.HitInfo hit)
@@ -210,6 +278,7 @@ public class HydrolysistBossBody : ModNPC
         {
             // Do something unique when the boss is first killed
         }
+
         NPC.SetEventFlagCleared(ref DownedBossSystem.downedHydrolysistBoss, -1);
     }
 
@@ -239,6 +308,599 @@ public class HydrolysistBossBody : ModNPC
     }
 
     public override void AI()
+    {
+        int strikeDamage = NPC.GetAttackDamage_ForProjectiles_MultiLerp(30, 45, 60);
+        if (
+            Main.netMode != NetmodeID.MultiplayerClient
+            && Timer % 2 != 0
+            && stateMachine.CurrentState is not TransformationState
+        )
+            StrikeShimmeredPlayers(strikeDamage);
+        Vector2 center = NPC.Center;
+        // Get a target
+        if (
+            NPC.target < 0
+            || NPC.target == Main.maxPlayers
+            || Main.player[NPC.target].dead
+            || !Main.player[NPC.target].active
+        )
+        {
+            NPC.TargetClosest();
+        }
+
+        Player player = Main.player[NPC.target];
+
+        if (player.dead || !player.active || Vector2.Distance(player.Center, center) > AggroRadius)
+        {
+            NPC.life = 0;
+            NPC.HitEffect();
+            NPC.active = false;
+            NPC.velocity.Y -= 0.02f;
+            if (Main.netMode != NetmodeID.MultiplayerClient)
+                NPC.EncourageDespawn(120);
+            return;
+        }
+        var context = new HydrolysistContext { Boss = this, Target = player };
+        stateMachine.Tick(context);
+        if (stateMachine.CurrentState is not TransformationState)
+            Lighting.AddLight(center, Color.Pink.ToVector3() * 0.75f);
+    }
+
+    private void StrikeShimmeredPlayers(int strikeDamage)
+    {
+        foreach (Player player in Main.ActivePlayers)
+        {
+            if (!player.shimmering)
+                continue;
+            int finalDamage = (int)player.GetTotalDamage(DamageClass.Magic).ApplyTo(strikeDamage);
+            player.Hurt(
+                PlayerDeathReason.ByNPC(this.NPC.whoAmI),
+                finalDamage,
+                -player.direction,
+                knockback: 4f
+            );
+            player.AddBuff(ModContent.BuffType<ShimmerImmunityBuff>(), 300, false);
+            if (Collision.SolidCollision(player.position, player.width, player.height - 2, false))
+            {
+                Vector2? position = ShimmerHelper.FindSpotWithoutShimmer(player, 1024, false);
+                if (position.HasValue)
+                {
+                    Vector2 spot = position.Value;
+                    Lighting.AddLight(spot, Color.White.ToVector3());
+                    // spot.X += player.width;
+                    spot.Y -= player.height * 2;
+                    player.position = spot;
+                }
+            }
+            CreateArc(player);
+        }
+    }
+
+    private void CreateArc(Player player)
+    {
+        Vector2 start = NPC.Center;
+        Vector2 end = player.Center;
+        float distance = Vector2.Distance(start, end);
+
+        // Number of intermediate points – scales with distance but clamped
+        int segments = Math.Clamp((int)(distance / 40f), 4, 24);
+
+        var points = new List<Vector2>(segments + 1) { start };
+
+        // Build a jagged, semi-random polyline between start and end
+        Vector2 dir = end - start;
+        Vector2 perp = new(-dir.Y, dir.X);
+        if (perp == Vector2.Zero)
+            perp = Vector2.UnitX;
+        perp = Vector2.Normalize(perp);
+
+        float maxOffset = Math.Min(120f, distance * 0.25f);
+        for (int i = 1; i < segments; i++)
+        {
+            float t = i / (float)segments;
+            Vector2 point = Vector2.Lerp(start, end, t);
+
+            // Offset stronger near the middle, weaker near endpoints
+            float midFactor = 1f - Math.Abs(2f * t - 1f);
+            float offset = Main.rand.NextFloat(-1f, 1f) * maxOffset * midFactor;
+            point += perp * offset;
+            // small random jitter
+            point += Main.rand.NextVector2Circular(4f, 4f);
+            points.Add(point);
+        }
+        points.Add(end);
+
+        if (Main.netMode == NetmodeID.Server)
+            return;
+
+        SoundEngine.PlaySound(SoundID.DD2_EtherianPortalDryadTouch, NPC.Center);
+        for (int s = 0; s < points.Count - 1; s++)
+        {
+            Vector2 a = points[s];
+            Vector2 b = points[s + 1];
+            float segLen = Vector2.Distance(a, b);
+            int dustCount = Math.Max(2, (int)(segLen / 8f));
+            for (int k = 0; k <= dustCount; k++)
+            {
+                float u = k / (float)dustCount;
+                Vector2 pos = Vector2.Lerp(a, b, u) + Main.rand.NextVector2Circular(2f, 2f);
+                Vector2 velocity =
+                    (b - a).SafeNormalize(Vector2.UnitY) * Main.rand.NextFloat(0.2f, 2f);
+                var d = Dust.NewDustPerfect(pos, DustID.ShimmerSpark, velocity);
+                d.noGravity = true;
+                d.scale = Main.rand.NextFloat(2f, 3f);
+            }
+
+            // occasional brighter sparks at segment midpoints
+            if (Main.rand.NextBool(3))
+            {
+                Vector2 mid = (a + b) * 0.5f + Main.rand.NextVector2Circular(6f, 6f);
+                var spark = Dust.NewDustPerfect(
+                    mid,
+                    DustID.ShimmerSpark,
+                    (mid - NPC.Center) * 0.02f
+                );
+                spark.noGravity = true;
+                spark.scale = Main.rand.NextFloat(2.6f, 3.4f);
+            }
+        }
+    }
+
+    private class HydrolysistContext
+    {
+        public HydrolysistBossBody Boss;
+        public Player Target;
+    }
+
+    private class IdleState : IState<HydrolysistContext>
+    {
+        private const float DECISION_TIME = 60f;
+        private int phaseTracker = 0;
+        public List<Transition<HydrolysistContext>> Transitions { get; set; } = [];
+
+        public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
+        {
+            context.Boss.Timer = DECISION_TIME;
+            context.Boss.Phase = 0f;
+        }
+
+        public void Exit(IState<HydrolysistContext> to, HydrolysistContext context)
+        {
+            context.Boss.DebugPrint($"Transitioning to {to.GetType().Name}");
+        }
+
+        public void Tick(HydrolysistContext context)
+        {
+            context.Boss.Timer -= 1f;
+            if (Main.netMode == NetmodeID.MultiplayerClient || context.Boss.Timer != 0f)
+                return;
+            context.Boss.Phase = ++phaseTracker % Transitions.Count;
+            context.Boss.NPC.netUpdate = true;
+        }
+    }
+
+    private class TransformationState : IState<HydrolysistContext>
+    {
+        private const float TRANSFORMATION_TIME = 240f;
+        private static readonly AnimationFrameData StartAnimation = new(3, [1, 2, 3]);
+        private static readonly AnimationFrameData FloatAnimation = new(10, [7, 8, 9]);
+        public List<Transition<HydrolysistContext>> Transitions { get; set; } = [];
+
+        public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
+        {
+            context.Boss.Timer = TRANSFORMATION_TIME;
+            context.Boss.Phase = 0f;
+            context.Boss.NPC.Opacity = 0.25f;
+            context.Boss.NPC.velocity.Y = 0f;
+            context.Boss.NPC.dontTakeDamage = true;
+            context.Boss.NPC.chaseable = false;
+            context.Boss.NPC.netUpdate = true;
+            context.Boss.CurrentAnimation = StartAnimation;
+        }
+
+        public void Exit(IState<HydrolysistContext> to, HydrolysistContext context)
+        {
+            // context.Boss.NPC.Opacity = 1f;
+            context.Boss.NPC.velocity.Y = 0f;
+            context.Boss.NPC.dontTakeDamage = false;
+            context.Boss.NPC.chaseable = true;
+            context.Boss.NPC.netUpdate = true;
+        }
+
+        public void Tick(HydrolysistContext context)
+        {
+            context.Boss.NPC.Opacity = Math.Min(
+                context.Boss.NPC.Opacity + 1 / TRANSFORMATION_TIME,
+                1f
+            );
+            Lighting.AddLight(
+                context.Boss.NPC.Center,
+                Color.Pink.ToVector3()
+                    * (0.75f + 0.25f * MathF.Sin(context.Boss.Timer * MathF.PI / 15f))
+            );
+            ;
+            context.Boss.Timer--;
+            if (
+                context.Boss.Timer
+                < TRANSFORMATION_TIME
+                    - 60 * (1f / StartAnimation.frameRate) * StartAnimation.frames.Length
+            )
+            {
+                context.Boss.CurrentAnimation = FloatAnimation;
+                context.Boss.NPC.velocity.Y = -0.33f;
+            }
+        }
+    }
+
+    private class LightningState : IState<HydrolysistContext>
+    {
+        private const float CHARGE_TIME = 120f;
+        private const float ATTACK_TIME = 300f;
+        private const float RECOVER_TIME = 60f;
+        private const int FIRE_INTERVAL = 15;
+        private static readonly AnimationFrameData chargeAnimation = new(10, [13, 14, 15]);
+        private static readonly AnimationFrameData fireAnimation = new(10, [10, 11, 12]);
+        private static readonly AnimationFrameData recoverAnimation = new(10, [3, 4, 5, 6]);
+        public List<Transition<HydrolysistContext>> Transitions { get; set; }
+
+        public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
+        {
+            context.Boss.Timer = -1f;
+            context.Boss.Phase = 0f;
+        }
+
+        public void Exit(IState<HydrolysistContext> to, HydrolysistContext context) { }
+
+        public void Tick(HydrolysistContext context)
+        {
+            switch (context.Boss.Phase)
+            {
+                case 0:
+                    if (context.Boss.Timer <= 0)
+                    {
+                        context.Boss.Timer = CHARGE_TIME;
+                        context.Boss.DebugPrint("Entering Charging Phase");
+                    }
+                    ChargeLightning(context);
+                    break;
+                case 1:
+                    if (context.Boss.Timer <= 0)
+                    {
+                        context.Boss.Timer = ATTACK_TIME;
+                        context.Boss.DebugPrint("Entering Firing Phase");
+                    }
+                    FireLightning(context);
+                    break;
+                case 2:
+                    if (context.Boss.Timer <= 0)
+                    {
+                        context.Boss.Timer = RECOVER_TIME;
+                        context.Boss.DebugPrint("Entering Recovery Phase");
+                    }
+                    Recover(context);
+                    break;
+            }
+            context.Boss.Timer -= 1f;
+            if (context.Boss.Timer <= 0)
+            {
+                context.Boss.Phase++;
+            }
+        }
+
+        private static void ChargeLightning(HydrolysistContext context)
+        {
+            context.Boss.CurrentAnimation = chargeAnimation;
+        }
+
+        private static void FireLightning(HydrolysistContext context)
+        {
+            context.Boss.CurrentAnimation = fireAnimation;
+            if (context.Boss.NPC.HasValidTarget)
+            {
+                FaceHorizontallyTowards(
+                    context.Boss.NPC,
+                    Main.player[context.Boss.NPC.target].Center
+                );
+            }
+            if (context.Boss.Timer % FIRE_INTERVAL != 0)
+                return;
+            if (Main.netMode == NetmodeID.MultiplayerClient)
+                return;
+            if (!context.Boss.NPC.HasValidTarget)
+                context.Boss.NPC.TargetClosest();
+            if (!context.Boss.NPC.HasValidTarget)
+                return;
+            Vector2 directionToPlayer = SafeVector(
+                Main.player[context.Boss.NPC.target].position - context.Boss.NPC.position,
+                1
+            );
+            directionToPlayer.Normalize();
+            float spawnAngle = (
+                Vector2.Normalize(directionToPlayer.RotatedByRandom(Math.PI / 4)) * 7f
+            ).ToRotation();
+            Projectile.NewProjectileDirect(
+                context.Boss.NPC.GetSource_FromAI(),
+                context.Boss.NPC.Center,
+                directionToPlayer * 2f,
+                ModContent.ProjectileType<ShimmerLightning>(),
+                10,
+                10,
+                Main.myPlayer,
+                spawnAngle,
+                Main.rand.Next(100)
+            );
+            SoundEngine.PlaySound(SoundID.DD2_LightningAuraZap, context.Boss.NPC.Center);
+        }
+
+        private static void Recover(HydrolysistContext context)
+        {
+            context.Boss.CurrentAnimation = recoverAnimation;
+        }
+    }
+
+    private class BubbleSwarmState : IState<HydrolysistContext>
+    {
+        private const float CHARGE_TIME = 120f;
+        private const float ATTACK_TIME = 300f;
+        private const int FIRE_INTERVAL = 5;
+        private const float BUBBLE_SPEED = 8f;
+        private static int BUBBLE_DAMAGE;
+        private static readonly AnimationFrameData chargeAnimation = new(10, [13, 14, 15]);
+        private static readonly AnimationFrameData fireAnimation = new(10, [10, 11, 12]);
+
+        public List<Transition<HydrolysistContext>> Transitions { get; set; }
+
+        public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
+        {
+            context.Boss.Timer = -1f;
+            context.Boss.Phase = 0f;
+            BUBBLE_DAMAGE = context.Boss.NPC.GetAttackDamage_ForProjectiles(25, 30);
+        }
+
+        public void Exit(IState<HydrolysistContext> to, HydrolysistContext context) { }
+
+        public void Tick(HydrolysistContext context)
+        {
+            switch (context.Boss.Phase)
+            {
+                case 0:
+                    if (context.Boss.Timer <= 0)
+                    {
+                        context.Boss.Timer = CHARGE_TIME;
+                        context.Boss.DebugPrint("Entering Charging Phase");
+                    }
+                    ChargeBubbleSwarm(context);
+                    break;
+                case 1:
+                    if (context.Boss.Timer <= 0)
+                    {
+                        context.Boss.Timer = ATTACK_TIME;
+                        context.Boss.DebugPrint("Entering Firing Phase");
+                    }
+                    FireBubbleSwarm(context);
+                    break;
+            }
+            context.Boss.Timer -= 1f;
+            if (context.Boss.Timer <= 0)
+            {
+                context.Boss.Phase++;
+            }
+        }
+
+        private static void ChargeBubbleSwarm(HydrolysistContext context)
+        {
+            context.Boss.CurrentAnimation = chargeAnimation;
+            if (context.Boss.NPC.HasValidTarget)
+            {
+                FaceHorizontallyTowards(
+                    context.Boss.NPC,
+                    Main.player[context.Boss.NPC.target].Center
+                );
+            }
+        }
+
+        private static void FireBubbleSwarm(HydrolysistContext context)
+        {
+            context.Boss.CurrentAnimation = fireAnimation;
+            if (context.Boss.NPC.HasValidTarget)
+            {
+                FaceHorizontallyTowards(
+                    context.Boss.NPC,
+                    Main.player[context.Boss.NPC.target].Center
+                );
+            }
+
+            if (Main.netMode == NetmodeID.MultiplayerClient)
+                return;
+            if (!context.Boss.NPC.HasValidTarget)
+                context.Boss.NPC.TargetClosest();
+            if (!context.Boss.NPC.HasValidTarget)
+                return;
+            if (context.Boss.Timer % FIRE_INTERVAL != 0)
+                return;
+            Vector2 directionToPlayer = SafeVector(
+                Main.player[context.Boss.NPC.target].position - context.Boss.NPC.position,
+                1
+            );
+            Vector2 velocity = directionToPlayer.RotatedByRandom(Math.PI / 4);
+            velocity = velocity.SafeNormalize(Vector2.UnitX) * BUBBLE_SPEED;
+            Projectile.NewProjectileDirect(
+                context.Boss.NPC.GetSource_FromAI(),
+                context.Boss.NPC.Center,
+                velocity,
+                ModContent.ProjectileType<SmallBubble>(),
+                BUBBLE_DAMAGE,
+                10,
+                Main.myPlayer
+            );
+            SoundEngine.PlaySound(SoundID.Item85, context.Boss.NPC.Center);
+        }
+    }
+
+    private class GiantBubbleState : IState<HydrolysistContext>
+    {
+        private const float CHARGE_TIME = 60f;
+        private const float BUBBLE_SPEED = 5f;
+        private static readonly AnimationFrameData chargeAnimation = new(10, [13, 14, 15]);
+        private static readonly AnimationFrameData fireAnimation = new(10, [10, 11, 12]);
+        public List<Transition<HydrolysistContext>> Transitions { get; set; }
+
+        public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
+        {
+            context.Boss.Timer = 0f;
+            context.Boss.Phase = 0f;
+            context.Boss.NPC.netUpdate = true;
+        }
+
+        public void Exit(IState<HydrolysistContext> to, HydrolysistContext context) { }
+
+        public void Tick(HydrolysistContext context)
+        {
+            switch (context.Boss.Phase)
+            {
+                case 0:
+                    if (context.Boss.Timer <= 0)
+                    {
+                        context.Boss.Timer = CHARGE_TIME;
+                        context.Boss.DebugPrint("Entering Charging Phase");
+                    }
+                    context.Boss.CurrentAnimation = chargeAnimation;
+                    if (context.Target.active)
+                        FaceHorizontallyTowards(context.Boss.NPC, context.Target.Center);
+                    break;
+                case 1:
+                    if (context.Boss.Timer <= 0)
+                    {
+                        context.Boss.Timer = 10f;
+                    }
+                    FireBubble(context);
+                    break;
+            }
+            context.Boss.Timer -= 1f;
+            if (context.Boss.Timer <= 0)
+            {
+                context.Boss.Phase++;
+            }
+        }
+
+        private static void FireBubble(HydrolysistContext context)
+        {
+            context.Boss.CurrentAnimation = fireAnimation;
+            FaceHorizontallyTowards(context.Boss.NPC, context.Target.Center);
+
+            if (context.Boss.Timer < 10)
+                return;
+
+            if (Main.netMode == NetmodeID.MultiplayerClient)
+                return;
+
+            Vector2 directionToPlayer = SafeVector(
+                context.Target.position - context.Boss.NPC.position,
+                1
+            );
+            directionToPlayer.Normalize();
+            Vector2 velocity = directionToPlayer * BUBBLE_SPEED;
+            Projectile.NewProjectileDirect(
+                context.Boss.NPC.GetSource_FromAI(),
+                context.Boss.NPC.Center,
+                velocity,
+                ModContent.ProjectileType<BigBubble>(),
+                160,
+                10,
+                Main.myPlayer
+            );
+            SoundEngine.PlaySound(SoundID.Item85, context.Boss.NPC.Center);
+        }
+    }
+
+    private class MovementState : IState<HydrolysistContext>
+    {
+        private const float MOVE_TIME = 1f; // TEMP SKIP VALUE
+        private static readonly AnimationFrameData moveAnimation = new(10, [4, 5, 6]);
+        public List<Transition<HydrolysistContext>> Transitions { get; set; }
+        private Vector2 location;
+
+        public void Enter(IState<HydrolysistContext> from, HydrolysistContext context)
+        {
+            context.Boss.Timer = MOVE_TIME;
+            context.Boss.Phase = 0f;
+            context.Boss.CurrentAnimation = moveAnimation;
+            context.Boss.NPC.dontTakeDamage = true;
+            context.Boss.NPC.netUpdate = true;
+            if (Main.netMode == NetmodeID.MultiplayerClient)
+                return;
+        }
+
+        public void Exit(IState<HydrolysistContext> to, HydrolysistContext context)
+        {
+            context.Boss.NPC.velocity.Y = 0f;
+            context.Boss.NPC.dontTakeDamage = false;
+            context.Boss.NPC.netUpdate = true;
+        }
+
+        public void Tick(HydrolysistContext context)
+        {
+            context.Boss.Timer -= 1f;
+            if (context.Boss.Timer <= 0)
+            {
+                context.Boss.Phase++;
+            }
+        }
+    }
+
+    //#region Cultist Code
+    private static List<int> GetLinkedClones(int leaderWhoAmI)
+    {
+        List<int> cloneIndices = new List<int>();
+        for (int i = 0; i < 200; i++)
+        {
+            if (
+                Main.npc[i].active
+                && Main.npc[i].type == NPCID.CultistBossClone
+                && Main.npc[i].ai[3] == leaderWhoAmI
+            )
+            {
+                cloneIndices.Add(i);
+            }
+        }
+
+        return cloneIndices;
+    }
+
+    private enum CultistAiState
+    {
+        SpawnFadeIn = -1,
+        IdleDecision = 0,
+        MoveSequence = 1,
+        IceMistVolley = 2,
+        FireballBarrage = 3,
+        LightningOrbAndBolts = 4,
+        Ritual = 5,
+        TauntPause = 6,
+        AncientDoomFan = 7,
+        SummonAdds = 8,
+    }
+
+    // Constants extracted for readability
+    private const float AggroRadius = 5600f;
+    private const float SpreadSmall = 0.5235987901687622f; // ~30 degrees
+    private const float SpreadLarge = 1.2566370964050293f; // ~72 degrees
+    private const float TwoPi = (float)Math.PI * 2f;
+    private const float RitualRingRadius = 180f;
+    private const int RitualFadeOutTicks = 30;
+    private const int RitualBetweenTicks = 60; // 30->90 window
+    private const int RitualActiveStart = 120;
+    private const int RitualActiveEnd = 420;
+
+    // High-level AI overview
+    // ai[0] = State machine selector (see AiState)
+    // ai[1] = State-local timer (ticks)
+    // ai[2] = Projectile id for ritual/anchor projectiles (when used)
+    // ai[3] = Pattern index/phase counter OR link to leader (vanilla Cultist), context-dependent
+    // localAI[0] = One-time spawn init flag
+    // localAI[1] = Clone group id (vanilla Cultist behavior)
+    // localAI[2] = Pose/animation hint (10, 11, 12, 13 used by vanilla sprites)
+    public void _CultistAI()
     {
         // Aliases for AI indices
         ref float aiState = ref NPC.ai[0];
@@ -494,10 +1156,10 @@ public class HydrolysistBossBody : ModNPC
             isUnchaseable = true;
         }
         // Main AI state machine
-        switch ((AiState)(int)aiState)
+        switch ((CultistAiState)(int)aiState)
         {
             // Idle/decision state: pick and transition into the next attack pattern
-            case AiState.IdleDecision:
+            case CultistAiState.IdleDecision:
             {
                 TickIdleDecision(
                     player,
@@ -511,14 +1173,14 @@ public class HydrolysistBossBody : ModNPC
                 break;
             }
             // Movement wind-up/cooldown utility state used by several patterns
-            case AiState.MoveSequence:
+            case CultistAiState.MoveSequence:
             {
                 TickMoveSequence(ref isInvulnerable);
 
                 break;
             }
             // Ice mist volley (periodic aimed projectiles)
-            case AiState.IceMistVolley:
+            case CultistAiState.IceMistVolley:
             {
                 TickIceMistVolley(
                     player,
@@ -531,7 +1193,7 @@ public class HydrolysistBossBody : ModNPC
                 break;
             }
             // Fireball barrage: several aimed bursts from boss and clones
-            case AiState.FireballBarrage:
+            case CultistAiState.FireballBarrage:
             {
                 TickFireballBarrage(
                     player,
@@ -545,7 +1207,7 @@ public class HydrolysistBossBody : ModNPC
                 break;
             }
             // Lightning orb phase: spawns a charging orb after allied clone volley
-            case AiState.LightningOrbAndBolts:
+            case CultistAiState.LightningOrbAndBolts:
             {
                 TickLightningOrbAndBolts(
                     player,
@@ -557,28 +1219,28 @@ public class HydrolysistBossBody : ModNPC
                 break;
             }
             // Ritual phase: fade-out -> ritual circle -> fade-in & sustained tracking
-            case AiState.Ritual:
+            case CultistAiState.Ritual:
             {
                 TickRitual(player, isLeaderCultist, ref isInvulnerable, ref isUnchaseable);
 
                 break;
             }
             // Short taunt/pause state
-            case AiState.TauntPause:
+            case CultistAiState.TauntPause:
             {
                 TickTauntPause();
 
                 break;
             }
             // Ancient Doom fanned waves from boss and clones
-            case AiState.AncientDoomFan:
+            case CultistAiState.AncientDoomFan:
             {
                 TickAncientDoomFan(player, center, isLeaderCultist, doomInterval, doomRepeats);
 
                 break;
             }
             // Summon adds around the player at random valid tiles
-            case AiState.SummonAdds:
+            case CultistAiState.SummonAdds:
             {
                 TickSummonAdds(player, center, isLeaderCultist, summonInterval, summonRepeats);
 
@@ -1466,4 +2128,6 @@ public class HydrolysistBossBody : ModNPC
             NPC.netUpdate = true;
         }
     }
+
+    //#endregion
 }
