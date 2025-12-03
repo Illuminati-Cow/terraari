@@ -84,7 +84,7 @@ namespace terraari.Content.Projectiles
             }
         }
 
-        public override bool PreDraw(ref Color lightColor)
+        public bool PreDraw2(ref Color lightColor)
         {
             // Don't draw on server
             if (Main.netMode == NetmodeID.Server || shader == null)
@@ -109,6 +109,64 @@ namespace terraari.Content.Projectiles
             // shader.Parameters["uImageSize0"].SetValue(new Vector2(texture.Width, texture.Height));
             // shader.Parameters["uScreenResolution"].SetValue(new Vector2(Main.screenWidth, Main.screenHeight));
 
+            // Apply the shader
+            shader.CurrentTechnique.Passes[0].Apply();
+
+            // Draw the projectile with shader
+            Vector2 drawPosition = Projectile.Center - Main.screenPosition;
+            Vector2 origin = new Vector2(texture.Width, texture.Height);
+
+            spriteBatch.Draw(texture, drawPosition, null, Color.White, 
+                Projectile.rotation, origin, Projectile.scale, SpriteEffects.None, 0f);
+
+            // Restart spritebatch with default settings
+            spriteBatch.End();
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, 
+                Main.DefaultSamplerState, DepthStencilState.None, 
+                RasterizerState.CullCounterClockwise, null, Main.GameViewMatrix.TransformationMatrix);
+
+            // Return false to prevent default drawing
+            return false;
+        }
+
+        public override bool PreDraw(ref Color lightColor)
+        {
+            // Don't draw on server
+            if (Main.netMode == NetmodeID.Server || shader == null)
+                return false;
+
+            SpriteBatch spriteBatch = Main.spriteBatch;
+            Texture2D texture = ModContent.Request<Texture2D>(Texture).Value;
+            GraphicsDevice graphicsDevice = Main.graphics.GraphicsDevice;
+
+            // Get the current screen as a texture
+            // We need to access Main.screenTarget or Main.screenTargetSwap
+            RenderTarget2D screenCapture = Main.screenTarget;
+
+            // Save the current spritebatch state
+            spriteBatch.End();
+
+            // Start spritebatch with shader
+            spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, 
+                SamplerState.LinearClamp, DepthStencilState.Default, 
+                RasterizerState.CullNone, null, Main.GameViewMatrix.TransformationMatrix);
+
+            // Set shader parameters (customize based on your shader)
+            shader.Parameters["uTime"]?.SetValue((float)Main.timeForVisualEffects * 0.05f);
+            shader.Parameters["uOpacity"]?.SetValue(1f - Projectile.alpha / 255f);
+
+            graphicsDevice.Textures[1] = screenCapture;
+            graphicsDevice.SamplerStates[1] = SamplerState.LinearClamp;
+
+            // Pass projectile position for warping center point
+            if (shader.Parameters["uProjectilePos"] != null)
+            {
+                Vector2 screenPos = Projectile.Center - Main.screenPosition;
+                shader.Parameters["uProjectilePos"].SetValue(new Vector2(
+                    screenPos.X / Main.screenWidth,
+                    screenPos.Y / Main.screenHeight));
+            }
+            
             // Apply the shader
             shader.CurrentTechnique.Passes[0].Apply();
 
