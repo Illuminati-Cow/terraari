@@ -807,9 +807,7 @@ public class HydrolysistBossBody : ModNPC
                 ModContent.ProjectileType<BigBubble>(),
                 160,
                 10,
-                Main.myPlayer,
-                context.Target.whoAmI, // Initial homing target
-                0
+                Main.myPlayer
             );
             SoundEngine.PlaySound(SoundID.Item85, context.Boss.NPC.Center);
         }
