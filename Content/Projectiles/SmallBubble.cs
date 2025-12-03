@@ -6,12 +6,14 @@ using Terraria;
 using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
+using ShaderHelper = Terraari.Common.Helpers.ShaderHelper;
 
 namespace Terraari.Content.Projectiles;
 
 public class SmallBubble : ModProjectile
 {
-    // public override string Texture => $"Terraria/Images/Projectile_{ProjectileID.Bubble}";
+    private Effect shader;
+
     public override string GlowTexture => "Terraari/Content/Projectiles/SmallBubble_e";
 
     public const int GOAL_ALPHA = 40;
@@ -44,6 +46,8 @@ public class SmallBubble : ModProjectile
         Projectile.ignoreWater = false; // Does the projectile ignore water (doesn't slow down in it)
         Projectile.tileCollide = true; // Does the projectile collide with tiles, like blocks?
         Projectile.alpha = 255; // 255 = Completely transparent
+
+        shader = ShaderHelper.SetUpShimmerShader();
     }
 
     private static Vector2 RandomInUnitCircle()
@@ -138,18 +142,7 @@ public class SmallBubble : ModProjectile
         // Visual scale multiplier of 3 applied on top of logical scale growth.
         float visualScale = Projectile.scale * 3f;
 
-        // Draw base sprite centered.
-        Main.EntitySpriteDraw(
-            texture,
-            drawPos,
-            frame,
-            lightColor * ((255 - Projectile.alpha) / 255f),
-            Projectile.rotation,
-            origin,
-            visualScale,
-            SpriteEffects.None,
-            0
-        );
+
 
         // Draw glow texture (if available) with same scaling, using alpha factor.
         if (!string.IsNullOrEmpty(GlowTexture))
@@ -169,6 +162,20 @@ public class SmallBubble : ModProjectile
                 0
             );
         }
+
+        // Draw base sprite centered.
+        ShaderHelper.DrawShimmerShader(
+            shader, 
+            texture,
+            drawPos,
+            frame,
+            lightColor * ((255 - Projectile.alpha) / 255f),
+            Projectile.rotation,
+            origin,
+            visualScale,
+            SpriteEffects.None,
+            0
+        );
 
         // We've manually drawn; skip default drawing.
         return false;

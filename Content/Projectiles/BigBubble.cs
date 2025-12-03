@@ -1,12 +1,11 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using ReLogic.Content;
-using terraari.Common.Helpers;
 using Terraria;
 using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
+using ShaderHelper = Terraari.Common.Helpers.ShaderHelper;
 
 namespace Terraari.Content.Projectiles;
 
@@ -57,7 +56,12 @@ public class BigBubble : ModProjectile
     }
 
     public override bool PreDraw(ref Color lightColor) {
-        ShaderHelper.DrawShimmerShader(shader, Texture, Projectile);
+        Texture2D texture = ModContent.Request<Texture2D>(Texture).Value;
+        Rectangle frame = new(0, 0, texture.Width, texture.Height);
+        Vector2 origin = texture.Size() / 2f;
+        Vector2 mainPos = Projectile.Center - Main.screenPosition;
+        
+        ShaderHelper.DrawShimmerShader(shader, texture, mainPos, frame, Color.White, Projectile.rotation, origin, Projectile.scale, SpriteEffects.None, 0);
 
         // Return false to prevent default drawing
         return false;
