@@ -1,4 +1,5 @@
 using Mono.CompilerServices.SymbolWriter;
+using Steamworks;
 using Terraari.Common.Systems;
 using terraari.Content.NPCs.HydrolysistBoss;
 using Terraria;
@@ -32,10 +33,10 @@ public class HydrolysistNpcBody : ModNPC
 
     public override void SetStaticDefaults()
     {
-        Main.npcFrameCount[Type] = 25; // The total amount of frames the NPC has
+        Main.npcFrameCount[Type] = 4; // The total amount of frames the NPC has
 
-        NPCID.Sets.ExtraFramesCount[Type] = 9; // Generally for Town NPCs, but this is how the NPC does extra things such as sitting in a chair and talking to other NPCs. This is the remaining frames after the walking frames.
-        NPCID.Sets.AttackFrameCount[Type] = 4; // The amount of frames in the attacking animation.
+        NPCID.Sets.ExtraFramesCount[Type] = 0; // Generally for Town NPCs, but this is how the NPC does extra things such as sitting in a chair and talking to other NPCs. This is the remaining frames after the walking frames.
+        NPCID.Sets.AttackFrameCount[Type] = 0; // The amount of frames in the attacking animation.
         NPCID.Sets.DangerDetectRange[Type] = 700; // The amount of pixels away from the center of the NPC that it tries to attack enemies.
         NPCID.Sets.AttackType[Type] = 0; // The type of attack the Town NPC performs. 0 = throwing, 1 = shooting, 2 = magic, 3 = melee
         NPCID.Sets.AttackTime[Type] = 90; // The amount of time it takes for the NPC's attack animation to be over once it starts.
@@ -102,8 +103,25 @@ public class HydrolysistNpcBody : ModNPC
         NPC.DeathSound = SoundID.NPCDeath1;
         NPC.knockBackResist = 0.5f;
         NPC.townNPC = false;
+    }
 
-        AnimationType = NPCID.Guide;
+    public override void FindFrame(int frameHeight)
+    {
+        if (NPC.velocity.X == 0f)
+        {
+            NPC.frameCounter = 0f;
+            NPC.frame.Y = 0;
+            return;
+        }
+        NPC.direction = NPC.spriteDirection = NPC.velocity.X > 0f ? 1 : -1;
+        NPC.frameCounter += 1.0;
+        int ticksPerFrame = 10;
+        int totalFrames = Main.npcFrameCount[Type];
+        int frameIndex = (int)(NPC.frameCounter / ticksPerFrame) % totalFrames;
+        NPC.frame.Y = frameIndex * frameHeight;
+
+        if (NPC.frameCounter >= ticksPerFrame * totalFrames)
+            NPC.frameCounter = 0f;
     }
 
     // public override void SetBestiary(BestiaryDatabase database, BestiaryEntry bestiaryEntry)
