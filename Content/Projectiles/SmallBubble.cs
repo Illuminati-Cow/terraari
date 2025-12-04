@@ -13,6 +13,7 @@ namespace Terraari.Content.Projectiles;
 public class SmallBubble : ModProjectile
 {
     private Effect shader;
+    private float seed;
 
     public override string GlowTexture => "Terraari/Content/Projectiles/SmallBubble_e";
 
@@ -48,6 +49,7 @@ public class SmallBubble : ModProjectile
         Projectile.alpha = 255; // 255 = Completely transparent
 
         shader = ShaderHelper.SetUpShimmerShader();
+        seed = (float)Random.Shared.NextDouble();
     }
 
     private static Vector2 RandomInUnitCircle()
@@ -172,7 +174,8 @@ public class SmallBubble : ModProjectile
             origin,
             visualScale,
             SpriteEffects.None,
-            0
+            0,
+            seed * 1000f
         );
 
         // We've manually drawn; skip default drawing.

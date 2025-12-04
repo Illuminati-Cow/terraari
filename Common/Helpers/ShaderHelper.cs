@@ -15,12 +15,20 @@ public static class ShaderHelper
     {
         if (Main.netMode == NetmodeID.Server)
             return null;
+<<<<<<< HEAD
         return ModContent
+=======
+        Effect shader = ModContent
+>>>>>>> 471b40fb519f17405f316ad0423f3224d89b3c0a
             .Request<Effect>(
                 "terraari/Assets/Effects/ShimmerGlow",
                 ReLogic.Content.AssetRequestMode.ImmediateLoad
             )
             .Value;
+<<<<<<< HEAD
+=======
+        return shader;
+>>>>>>> 471b40fb519f17405f316ad0423f3224d89b3c0a
     }
 
     public static void DrawShimmerShader(
@@ -33,7 +41,12 @@ public static class ShaderHelper
         Vector2 origin,
         float scale,
         SpriteEffects spriteEffects,
+<<<<<<< HEAD
         float layerDepth
+=======
+        float layerDepth,
+        float seed = 0
+>>>>>>> 471b40fb519f17405f316ad0423f3224d89b3c0a
     )
     {
         // Don't draw on server
@@ -58,6 +71,7 @@ public static class ShaderHelper
 
         // Set shader parameters (customize based on your shader)
         shader.Parameters["uTime"]?.SetValue((float)Main.timeForVisualEffects * 0.05f);
+        shader.Parameters["random"]?.SetValue(seed);
         // Vector4[] colors = [
         //     new(255/255, 139/255, 139/255, 1),
         //     new(255/255, 203/255, 164/255, 1),

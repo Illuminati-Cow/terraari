@@ -5,6 +5,7 @@ sampler uImage0 : register(s0) {
 };
 
 float uTime; 
+float random;
 
 static const int COLOR_COUNT = 9;
 static const float3 colors[COLOR_COUNT] = {
@@ -39,7 +40,7 @@ float4 ArmorBasic(float4 sampleColor : COLOR0, float2 coords : TEXCOORD0) : COLO
     const float gradientSpeed = 1.0/4.0;
     const float sectionSizeInv = COLOR_COUNT;
 
-    float x = coords.x*gradientScaleInv + uTime*gradientSpeed;
+    float x = coords.x*gradientScaleInv + uTime*gradientSpeed + random;
 
     float currentSection = fmod(x*sectionSizeInv, COLOR_COUNT);
     float sectionProgress = frac(currentSection);
