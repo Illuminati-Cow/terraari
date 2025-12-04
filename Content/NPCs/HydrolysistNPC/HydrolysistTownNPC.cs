@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Steamworks;
 using Terraari.Common.Systems;
 using Terraria;
 using Terraria.GameContent;
@@ -7,7 +8,6 @@ using Terraria.GameContent.Personalities;
 using Terraria.ID;
 using Terraria.Localization;
 using Terraria.ModLoader;
-using Steamworks;
 
 namespace terraari.Content.NPCs
 {
@@ -60,6 +60,7 @@ namespace terraari.Content.NPCs
 
             // AnimationType = NPCID.Guide;
         }
+
         public override void FindFrame(int frameHeight)
         {
             if (NPC.velocity.X == 0f)
