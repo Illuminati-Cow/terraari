@@ -144,8 +144,6 @@ public class SmallBubble : ModProjectile
         // Visual scale multiplier of 3 applied on top of logical scale growth.
         float visualScale = Projectile.scale * 3f;
 
-
-
         // Draw glow texture (if available) with same scaling, using alpha factor.
         if (!string.IsNullOrEmpty(GlowTexture))
         {
@@ -167,7 +165,7 @@ public class SmallBubble : ModProjectile
 
         // Draw base sprite centered.
         ShaderHelper.DrawShimmerShader(
-            shader, 
+            shader,
             texture,
             drawPos,
             frame,

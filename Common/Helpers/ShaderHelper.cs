@@ -13,16 +13,44 @@ public static class ShaderHelper {
     public static Effect SetUpShimmerShader() {
         if (Main.netMode == NetmodeID.Server) return null;
         Effect shader = ModContent.Request<Effect>("terraari/Assets/Effects/ShimmerGlow", ReLogic.Content.AssetRequestMode.ImmediateLoad).Value;
+public static class ShaderHelper
+{
+    public static Effect SetUpShimmerShader()
+    {
+        if (Main.netMode == NetmodeID.Server)
+            return null;
+        Effect shader = ModContent
+            .Request<Effect>(
+                "terraari/Assets/Effects/ShimmerGlow",
+                ReLogic.Content.AssetRequestMode.ImmediateLoad
+            )
+            .Value;
         return shader;
     }
 
     public static void DrawShimmerShader(Effect shader, Texture2D texture, Vector2 mainPos, Rectangle sourceRect, Color drawColor, float rotation, Vector2 origin, float scale, SpriteEffects spriteEffects, float layerDepth, float seed = 0)
+    public static void DrawShimmerShader(
+        Effect shader,
+        Texture2D texture,
+        Vector2 mainPos,
+        Rectangle sourceRect,
+        Color drawColor,
+        float rotation,
+        Vector2 origin,
+        float scale,
+        SpriteEffects spriteEffects,
+        float layerDepth,
+        float seed = 0
+    )
     {
         // Don't draw on server
         if (Main.netMode == NetmodeID.Server || shader == null) return;
+        if (Main.netMode == NetmodeID.Server || shader == null)
+            return;
 
         SpriteBatch spriteBatch = Main.spriteBatch;
         
+
         // Save the current spritebatch state
         spriteBatch.End();
 
@@ -30,6 +58,15 @@ public static class ShaderHelper {
         spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, 
             SamplerState.LinearClamp, DepthStencilState.Default, 
             RasterizerState.CullNone, null, Main.GameViewMatrix.TransformationMatrix);
+        spriteBatch.Begin(
+            SpriteSortMode.Immediate,
+            BlendState.AlphaBlend,
+            SamplerState.LinearClamp,
+            DepthStencilState.Default,
+            RasterizerState.CullNone,
+            null,
+            Main.GameViewMatrix.TransformationMatrix
+        );
 
         // Set shader parameters (customize based on your shader)
         shader.Parameters["uTime"]?.SetValue((float)Main.timeForVisualEffects * 0.05f);
@@ -48,17 +85,40 @@ public static class ShaderHelper {
         // shader.Parameters["colors"].SetValue(colors);
         // shader.Parameters["COLOR_COUNT"].SetValue(colors.Length);
         
+
         shader.CurrentTechnique.Passes[0].Apply();
 
         // spriteBatch.Draw(texture, drawPosition, sourceRect, Color.White, 
+        // spriteBatch.Draw(texture, drawPosition, sourceRect, Color.White,
         //     entity.rotation, origin, entity.scale, SpriteEffects.None, 0f);
         
         spriteBatch.Draw(texture, mainPos, sourceRect, drawColor, rotation, origin, scale, spriteEffects, 0f);
+
+        spriteBatch.Draw(
+            texture,
+            mainPos,
+            sourceRect,
+            drawColor,
+            rotation,
+            origin,
+            scale,
+            spriteEffects,
+            0f
+        );
 
         // Restart spritebatch with default settings
         spriteBatch.End();
         spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, 
             Main.DefaultSamplerState, DepthStencilState.None, 
             RasterizerState.CullCounterClockwise, null, Main.GameViewMatrix.TransformationMatrix);
+        spriteBatch.Begin(
+            SpriteSortMode.Deferred,
+            BlendState.AlphaBlend,
+            Main.DefaultSamplerState,
+            DepthStencilState.None,
+            RasterizerState.CullCounterClockwise,
+            null,
+            Main.GameViewMatrix.TransformationMatrix
+        );
     }
-}
+}}

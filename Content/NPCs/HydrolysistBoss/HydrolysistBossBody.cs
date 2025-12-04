@@ -15,8 +15,8 @@ using Terraria.Graphics.CameraModifiers;
 using Terraria.ID;
 using Terraria.ModLoader;
 using AnimationFrameData = Terraria.Animation.AnimationFrameData;
-using ShimmerHelper = Terraari.Common.Helpers.ShimmerHelper;
 using ShaderHelper = Terraari.Common.Helpers.ShaderHelper;
+using ShimmerHelper = Terraari.Common.Helpers.ShimmerHelper;
 
 namespace terraari.Content.NPCs.HydrolysistBoss;
 
@@ -163,7 +163,18 @@ public class HydrolysistBossBody : ModNPC
         }
 
         Vector2 mainPos = NPC.Center - screenPos + new Vector2(0f, NPC.gfxOffY);
-        ShaderHelper.DrawShimmerShader(shader, texture, mainPos, frame, drawColor, NPC.rotation, origin, NPC.scale, effects, 0f);
+        ShaderHelper.DrawShimmerShader(
+            shader,
+            texture,
+            mainPos,
+            frame,
+            drawColor,
+            NPC.rotation,
+            origin,
+            NPC.scale,
+            effects,
+            0f
+        );
 
         return false;
     }
