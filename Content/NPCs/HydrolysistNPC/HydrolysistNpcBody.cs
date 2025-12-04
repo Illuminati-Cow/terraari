@@ -92,8 +92,7 @@ public class HydrolysistNpcBody : ModNPC
 
     public override void SetDefaults()
     {
-        NPC.friendly = true; // NPC Will not attack player
-        NPC.width = 18;
+        NPC.friendly = true;
         NPC.height = 40;
         NPC.aiStyle = NPCAIStyleID.Passive;
         NPC.damage = 10;

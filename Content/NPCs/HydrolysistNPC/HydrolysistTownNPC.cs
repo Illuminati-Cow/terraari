@@ -7,6 +7,7 @@ using Terraria.GameContent.Personalities;
 using Terraria.ID;
 using Terraria.Localization;
 using Terraria.ModLoader;
+using Steamworks;
 
 namespace terraari.Content.NPCs
 {
@@ -21,10 +22,10 @@ namespace terraari.Content.NPCs
 
         public override void SetStaticDefaults()
         {
-            Main.npcFrameCount[Type] = 25;
+            Main.npcFrameCount[Type] = 4;
 
-            NPCID.Sets.ExtraFramesCount[Type] = 9;
-            NPCID.Sets.AttackFrameCount[Type] = 4;
+            NPCID.Sets.ExtraFramesCount[Type] = 0;
+            NPCID.Sets.AttackFrameCount[Type] = 0;
             NPCID.Sets.DangerDetectRange[Type] = 700;
             NPCID.Sets.AttackType[Type] = 0;
             NPCID.Sets.AttackTime[Type] = 90;
@@ -57,7 +58,25 @@ namespace terraari.Content.NPCs
             NPC.DeathSound = SoundID.NPCDeath1;
             NPC.knockBackResist = 0.5f;
 
-            AnimationType = NPCID.Guide;
+            // AnimationType = NPCID.Guide;
+        }
+        public override void FindFrame(int frameHeight)
+        {
+            if (NPC.velocity.X == 0f)
+            {
+                NPC.frameCounter = 0f;
+                NPC.frame.Y = 0;
+                return;
+            }
+            NPC.direction = NPC.spriteDirection = NPC.velocity.X > 0f ? 1 : -1;
+            NPC.frameCounter += 1.0;
+            int ticksPerFrame = 10;
+            int totalFrames = Main.npcFrameCount[Type];
+            int frameIndex = (int)(NPC.frameCounter / ticksPerFrame) % totalFrames;
+            NPC.frame.Y = frameIndex * frameHeight;
+
+            if (NPC.frameCounter >= ticksPerFrame * totalFrames)
+                NPC.frameCounter = 0f;
         }
 
         // This makes him eligible to spawn as a town NPC once the boss is beaten
