@@ -98,10 +98,10 @@ public class HydrolysistBossBody : ModNPC
     public override void SetDefaults()
     {
         // TODO: Scale contact damage NPCd on difficulty
-        NPC.damage = 40;
+        NPC.damage = 70;
         // TODO: Set defense to a reasonable value NPCd on relative boss progression
-        NPC.defense = 35;
-        NPC.lifeMax = 20_000;
+        NPC.defense = 40;
+        NPC.lifeMax = 60_000;
         NPC.HitSound = SoundID.NPCHit55;
         NPC.DeathSound = SoundID.NPCDeath59;
         NPC.alpha = 55;
@@ -380,7 +380,7 @@ public class HydrolysistBossBody : ModNPC
 
     public override void AI()
     {
-        int strikeDamage = NPC.GetAttackDamage_ForProjectiles_MultiLerp(30, 45, 60);
+        int strikeDamage = NPC.GetAttackDamage_ForProjectiles_MultiLerp(100, 150, 200);
         if (
             Main.netMode != NetmodeID.MultiplayerClient
             && Timer % 2 != 0
@@ -528,7 +528,7 @@ public class HydrolysistBossBody : ModNPC
 
     private class IdleState : IState<HydrolysistContext>
     {
-        private const float DECISION_TIME = 60f;
+        private const float DECISION_TIME = 30f;
         private int phaseTracker = 0;
         private readonly AnimationFrameData IdleAnimation = new(10, [4, 5, 6]);
         public List<Transition<HydrolysistContext>> Transitions { get; set; } = [];
@@ -610,10 +610,10 @@ public class HydrolysistBossBody : ModNPC
 
     private class LightningState : IState<HydrolysistContext>
     {
-        private const float CHARGE_TIME = 120f;
-        private const float ATTACK_TIME = 300f;
-        private const float RECOVER_TIME = 60f;
-        private const int FIRE_INTERVAL = 15;
+        private const float CHARGE_TIME = 60f;
+        private const float ATTACK_TIME = 180f;
+        private const float RECOVER_TIME = 30f;
+        private const int FIRE_INTERVAL = 8;
         private static readonly AnimationFrameData chargeAnimation = new(10, [7, 8, 9]);
         private static readonly AnimationFrameData fireAnimation = new(10, [10, 11, 12]);
         private static readonly AnimationFrameData recoverAnimation = new(10, [3, 4, 5, 6]);
@@ -699,7 +699,7 @@ public class HydrolysistBossBody : ModNPC
                 context.Boss.NPC.Center,
                 directionToPlayer * 2f,
                 ModContent.ProjectileType<ShimmerLightning>(),
-                10,
+                50,
                 10,
                 Main.myPlayer,
                 spawnAngle,
@@ -716,9 +716,9 @@ public class HydrolysistBossBody : ModNPC
 
     private class BubbleSwarmState : IState<HydrolysistContext>
     {
-        private const float CHARGE_TIME = 120f;
-        private const float ATTACK_TIME = 300f;
-        private const int FIRE_INTERVAL = 5;
+        private const float CHARGE_TIME = 90f;
+        private const float ATTACK_TIME = 180f;
+        private const int FIRE_INTERVAL = 4;
         private const float BUBBLE_SPEED = 8f;
         private static int BUBBLE_DAMAGE;
         private static readonly AnimationFrameData chargeAnimation = new(10, [7, 8, 9]);
@@ -730,7 +730,7 @@ public class HydrolysistBossBody : ModNPC
         {
             context.Boss.Timer = -1f;
             context.Boss.Phase = 0f;
-            BUBBLE_DAMAGE = context.Boss.NPC.GetAttackDamage_ForProjectiles(25, 30);
+            BUBBLE_DAMAGE = context.Boss.NPC.GetAttackDamage_ForProjectiles(40, 65);
         }
 
         public void Exit(IState<HydrolysistContext> to, HydrolysistContext context) { }
@@ -806,7 +806,7 @@ public class HydrolysistBossBody : ModNPC
                 velocity,
                 ModContent.ProjectileType<SmallBubble>(),
                 BUBBLE_DAMAGE,
-                10,
+                50,
                 Main.myPlayer
             );
             SoundEngine.PlaySound(SoundID.Item85, context.Boss.NPC.Center);
@@ -815,8 +815,8 @@ public class HydrolysistBossBody : ModNPC
 
     private class GiantBubbleState : IState<HydrolysistContext>
     {
-        private const float CHARGE_TIME = 60f;
-        private const float BUBBLE_SPEED = 5f;
+        private const float CHARGE_TIME = 100;
+        private const float BUBBLE_SPEED = 10f;
         private static readonly AnimationFrameData chargeAnimation = new(10, [7, 8, 9]);
         private static readonly AnimationFrameData fireAnimation = new(10, [10, 11, 12]);
         public List<Transition<HydrolysistContext>> Transitions { get; set; }
@@ -892,10 +892,10 @@ public class HydrolysistBossBody : ModNPC
     private class MovementState : IState<HydrolysistContext>
     {
         // Time the boss spends "charging" before disappearing
-        private const int TELEGRAPH_TIME = 30;
+        private const int TELEGRAPH_TIME = 15;
 
         // Time after reappearing before going back to idle / attacks
-        private const int RECOVER_TIME = 20;
+        private const int RECOVER_TIME = 15;
 
         private static readonly AnimationFrameData teleportOutAnimation = new(5, [4, 5, 6]);
         private static readonly AnimationFrameData teleportInAnimation = new(5, [7, 8, 9]);
