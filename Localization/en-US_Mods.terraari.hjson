@@ -2,7 +2,7 @@ NPCs: {
 	HydrolysistNpcBody: {
 		Upgraded: Mods.terraari.NPCs.HydrolysistNpcBody.Upgraded
 		DeathMessage: Mods.terraari.NPCs.HydrolysistNpcBody.DeathMessage
-		DisplayName: Hydrolysist Npc Body
+		DisplayName: Mysterious Mad Scientist
 
 		TownNPCMood: {
 			Content: I am content.
@@ -25,7 +25,7 @@ NPCs: {
 	HydrolysistBossBody.DisplayName: Hydrolysist Boss Body
 
 	HydrolysistTownNPC: {
-		DisplayName: Hydrolysist Town N P C
+		DisplayName: Hydrolysist
 
 		TownNPCMood: {
 			Content: I am content.

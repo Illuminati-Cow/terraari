@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Terraari.Common.Systems;
 using Terraria;
 using Terraria.GameContent;
+using Terraria.GameContent.Events;
 using Terraria.GameContent.Personalities;
 using Terraria.ID;
 using Terraria.Localization;
@@ -13,6 +14,7 @@ namespace terraari.Content.NPCs
     public class HydrolysistTownNPC : ModNPC
     {
         public const string ShopName = "Shop";
+        public int NumberOfTimesTalkedTo = 0;
 
         public override string Texture =>
             $"{Mod.Name}/Content/NPCs/HydrolysistNPC/HydrolysistTownNPC";
@@ -84,6 +86,98 @@ namespace terraari.Content.NPCs
             }
         }
 
+        public override string GetChat()
+        {
+            Player player = Main.LocalPlayer;
+            NumberOfTimesTalkedTo++;
+
+            // ========== First interaction ==========
+            if (NumberOfTimesTalkedTo == 1)
+            {
+                return "Oi, my name is The Hydrolisist... You don't know what that is? Well, for someone like you I will simply say that I study liquids.";
+            }
+
+            // Graveyard
+            if (player.ZoneGraveyard)
+            {
+                if (Main.rand.NextBool())
+                {
+                    return "Goodness, typically I like it when the water molecules group up and float around. But this just feels... ominous.";
+                }
+                return "You know all those undead have close to no liquid left in their body? I would hate my existence as well if I were a dry husk.";
+            }
+
+            // Blood Moon
+            if (Main.bloodMoon)
+            {
+                return "Scary... Blood is one liquid I have no interest in. Leave that in the body, thank you.";
+            }
+
+            // Party
+            if (BirthdayParty.PartyIsUp)
+            {
+                return "Typically I avoid parties, but this one seems fun enough.";
+            }
+
+            // Thunderstorm
+            if (Main.IsItStorming)
+            {
+                if (Main.rand.NextBool())
+                {
+                    return "Ugh, the only thing that could ruin the rain... it's the thunder and lightning.";
+                }
+                return "Guess today I will only observe from inside...";
+            }
+
+            // Plain rain (but not storming)
+            if (Main.raining && !Main.IsItStorming)
+            {
+                if (Main.rand.NextBool())
+                {
+                    return "Yes, yes, yes, I love the rain! I get to take some of the water and study it! Goodness, all the beautiful things found in the rain!";
+                }
+                return "Good thing there is no acid in this rain, otherwise it would melt the collection pots I have outside.";
+            }
+
+            // Windy day (no rain)
+            if (Main.IsItAHappyWindyDay && !Main.raining)
+            {
+                if (Main.rand.NextBool())
+                {
+                    return "Nothing interesting about air. It just blows and ruins my cloak.";
+                }
+                return "If we have to deal with the wind, why not add a little bit of rain so I can get a sample.";
+            }
+
+            // Witch Doctor present
+            int witchDoctorIndex = NPC.FindFirstNPC(NPCID.WitchDoctor);
+            if (witchDoctorIndex >= 0)
+            {
+                string wdName = Main.npc[witchDoctorIndex].GivenName;
+                return $"No, I am nothing like {wdName}! He believes in voodoo while I do real science.";
+            }
+
+            // Steampunker present
+            int steampunkerIndex = NPC.FindFirstNPC(NPCID.Steampunker);
+            if (steampunkerIndex >= 0)
+            {
+                string spName = Main.npc[steampunkerIndex].GivenName;
+                return $"{spName} keeps asking what liquid would best run their machines. Using anything other than water would just damage their machines, as well as the environment!";
+            }
+
+            switch (Main.rand.Next(4))
+            {
+                case 0:
+                    return "What do you need? Can you not see that I have some experiments I am trying to run!";
+                case 1:
+                    return "No, of course I don't study the ocean water... That's a different person entirely.";
+                case 2:
+                    return "Wait, don't... ugh, whatever, it's just water, but please don't just drink the stuff laying around.";
+                default:
+                    return "Hm, if I were to combine this liquid with some of this then maybe... huh? Oh, sorry, didn't see you come in, just rambling.";
+            }
+        }
+
         public override void AddShops()
         {
             var npcShop = new NPCShop(Type, ShopName);
@@ -142,7 +236,7 @@ namespace terraari.Content.NPCs
         //custom name pool
         public override List<string> SetNPCNameList()
         {
-            return new List<string> { "Hydro", "Lyss", "Mad Scientist", "Scary Guy", "" };
+            return new List<string> { "Hydro", "Lyss", "Tyler", "Coleman", "Thomas" };
         }
     }
 }

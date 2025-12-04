@@ -190,77 +190,77 @@ public class HydrolysistNpcBody : ModNPC
     public override bool CanChat() => true;
 
     public override void SetChatButtons(ref string button, ref string button2)
+    {
+        // Single Talk button
+        button = "Talk";
+        button2 = "";
+    }
+
+    public override void OnChatButtonClicked(bool firstButton, ref string shopName)
+    {
+        if (!firstButton)
+            return;
+
+        // Advance our little “ritual” sequence
+        summonTalkProgress++;
+
+        if (summonTalkProgress == 1)
         {
-            // Single Talk button
-            button = "Talk";
-            button2 = "";
+            // First line – placeholder, change later
+            Main.npcChatText =
+                "Mate, I need you listen to closely. There is more to this place than you see.";
+            return;
         }
 
-        public override void OnChatButtonClicked(bool firstButton, ref string shopName)
+        if (summonTalkProgress == 2)
         {
-            if (!firstButton)
-                return;
-
-            // Advance our little “ritual” sequence
-            summonTalkProgress++;
-
-            if (summonTalkProgress == 1)
-            {
-                // First line – placeholder, change later
-                Main.npcChatText = "Mate, I need you listen to closely. There is more to this place than you see.";
-                return;
-            }
-
-            if (summonTalkProgress == 2)
-            {
-                Main.npcChatText = "I can show you what I have discovered, but my research has had some... messy results at times.";
-                return;
-            }
-            if (summonTalkProgress == 3)
-            {
-                Main.npcChatText = "But I am so close to discovering the shimmers's true potential! If you truly wish to see the results of my research, it could be fascinating, or deadly.";
-                return;
-            }
-
-
-            Player player = Main.LocalPlayer;
-
-            // Only do spawn logic on server / singleplayer
-            if (Main.netMode == NetmodeID.MultiplayerClient)
-                return;
-
-            int spawnX = (int)player.Center.X;
-            int spawnY = (int)player.Center.Y - 200;
-
-            int bossIndex = NPC.NewNPC(
-                NPC.GetSource_FromAI(),
-                spawnX,
-                spawnY,
-                ModContent.NPCType<HydrolysistBossBody>()
-            );
-
-            if (bossIndex >= 0 && bossIndex < Main.maxNPCs && Main.netMode == NetmodeID.Server)
-            {
-                NetMessage.SendData(MessageID.SyncNPC, number: bossIndex);
-            }
-
-            Main.npcChatText = "Very well… let the waters break.";
-
-            // Kill the summoner NPC
-            NPC.StrikeInstantKill();
-
-            // Reset sequence in case something weird happens
-            summonTalkProgress = 0;
+            Main.npcChatText =
+                "I can show you what I have discovered, but my research has had some... messy results at times.";
+            return;
+        }
+        if (summonTalkProgress == 3)
+        {
+            Main.npcChatText =
+                "But I am so close to discovering the shimmers's true potential! If you truly wish to see the results of my research, it could be fascinating, or deadly.";
+            return;
         }
 
+        Player player = Main.LocalPlayer;
+
+        // Only do spawn logic on server / singleplayer
+        if (Main.netMode == NetmodeID.MultiplayerClient)
+            return;
+
+        int spawnX = (int)player.Center.X;
+        int spawnY = (int)player.Center.Y - 200;
+
+        int bossIndex = NPC.NewNPC(
+            NPC.GetSource_FromAI(),
+            spawnX,
+            spawnY,
+            ModContent.NPCType<HydrolysistBossBody>()
+        );
+
+        if (bossIndex >= 0 && bossIndex < Main.maxNPCs && Main.netMode == NetmodeID.Server)
+        {
+            NetMessage.SendData(MessageID.SyncNPC, number: bossIndex);
+        }
+
+        Main.npcChatText = "Very well… let the waters break.";
+
+        // Kill the summoner NPC
+        NPC.StrikeInstantKill();
+
+        // Reset sequence in case something weird happens
+        summonTalkProgress = 0;
+    }
 
     public override string GetChat()
-        {
-            // Reset the sequence whenever you start talking to him again
-            summonTalkProgress = 0;
+    {
+        // Reset the sequence whenever you start talking to him again
+        summonTalkProgress = 0;
 
-            // Placeholder text – change later to whatever intro you want
-            return "Oi, I am The Hydrolisist… You don’t know what that is? Well for someone like you I will simply say that I study liquids.";
-        }
-
+        // Placeholder text – change later to whatever intro you want
+        return "Oi, I am The Hydrolisist… You don’t know what that is? Well for someone like you I will simply say that I study liquids.";
+    }
 }
