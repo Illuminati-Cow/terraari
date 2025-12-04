@@ -55,13 +55,25 @@ public class BigBubble : ModProjectile
         HomingTarget = null; // Reset homing target
     }
 
-    public override bool PreDraw(ref Color lightColor) {
+    public override bool PreDraw(ref Color lightColor)
+    {
         Texture2D texture = ModContent.Request<Texture2D>(Texture).Value;
         Rectangle frame = new(0, 0, texture.Width, texture.Height);
         Vector2 origin = texture.Size() / 2f;
         Vector2 mainPos = Projectile.Center - Main.screenPosition;
-        
-        ShaderHelper.DrawShimmerShader(shader, texture, mainPos, frame, Color.White, Projectile.rotation, origin, Projectile.scale, SpriteEffects.None, 0);
+
+        ShaderHelper.DrawShimmerShader(
+            shader,
+            texture,
+            mainPos,
+            frame,
+            Color.White,
+            Projectile.rotation,
+            origin,
+            Projectile.scale,
+            SpriteEffects.None,
+            0
+        );
 
         // Return false to prevent default drawing
         return false;

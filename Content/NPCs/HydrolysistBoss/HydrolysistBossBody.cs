@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Terraari.Common.StateMachine;
 using Terraari.Common.Systems;
 using Terraari.Content.Buffs;
+using terraari.Content.NPCs;
 using Terraari.Content.Projectiles;
 using Terraria;
 using Terraria.Audio;
@@ -14,10 +15,9 @@ using Terraria.GameContent.ItemDropRules;
 using Terraria.Graphics.CameraModifiers;
 using Terraria.ID;
 using Terraria.ModLoader;
-using terraari.Content.NPCs;
 using AnimationFrameData = Terraria.Animation.AnimationFrameData;
-using ShimmerHelper = Terraari.Common.Helpers.ShimmerHelper;
 using ShaderHelper = Terraari.Common.Helpers.ShaderHelper;
+using ShimmerHelper = Terraari.Common.Helpers.ShimmerHelper;
 
 namespace terraari.Content.NPCs.HydrolysistBoss;
 
@@ -164,7 +164,18 @@ public class HydrolysistBossBody : ModNPC
         }
 
         Vector2 mainPos = NPC.Center - screenPos + new Vector2(0f, NPC.gfxOffY);
-        ShaderHelper.DrawShimmerShader(shader, texture, mainPos, frame, drawColor, NPC.rotation, origin, NPC.scale, effects, 0f);
+        ShaderHelper.DrawShimmerShader(
+            shader,
+            texture,
+            mainPos,
+            frame,
+            drawColor,
+            NPC.rotation,
+            origin,
+            NPC.scale,
+            effects,
+            0f
+        );
 
         return false;
     }
@@ -335,9 +346,9 @@ public class HydrolysistBossBody : ModNPC
     public override void OnKill()
     {
         if (!DownedBossSystem.downedHydrolysistBoss)
-		{
-			HydrolysistWorldSystem.unlockedHydrolysist = true;
-		}
+        {
+            HydrolysistWorldSystem.unlockedHydrolysist = true;
+        }
 
         NPC.SetEventFlagCleared(ref DownedBossSystem.downedHydrolysistBoss, -1);
     }

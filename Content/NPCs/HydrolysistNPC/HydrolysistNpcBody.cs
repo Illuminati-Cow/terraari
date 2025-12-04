@@ -176,7 +176,7 @@ public class HydrolysistNpcBody : ModNPC
         //Spawn only one
         if (NPC.AnyNPCs(ModContent.NPCType<HydrolysistNpcBody>()))
             return 0f;
-        
+
         if (HydrolysistWorldSystem.unlockedHydrolysist)
             return 0f;
 
