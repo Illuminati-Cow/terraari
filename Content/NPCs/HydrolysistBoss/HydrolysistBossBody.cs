@@ -14,6 +14,7 @@ using Terraria.GameContent.ItemDropRules;
 using Terraria.Graphics.CameraModifiers;
 using Terraria.ID;
 using Terraria.ModLoader;
+using terraari.Content.NPCs;
 using AnimationFrameData = Terraria.Animation.AnimationFrameData;
 using ShimmerHelper = Terraari.Common.Helpers.ShimmerHelper;
 using ShaderHelper = Terraari.Common.Helpers.ShaderHelper;
@@ -334,9 +335,9 @@ public class HydrolysistBossBody : ModNPC
     public override void OnKill()
     {
         if (!DownedBossSystem.downedHydrolysistBoss)
-        {
-            // Do something unique when the boss is first killed
-        }
+		{
+			HydrolysistWorldSystem.unlockedHydrolysist = true;
+		}
 
         NPC.SetEventFlagCleared(ref DownedBossSystem.downedHydrolysistBoss, -1);
     }

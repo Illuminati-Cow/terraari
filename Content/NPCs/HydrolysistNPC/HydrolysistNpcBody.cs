@@ -176,11 +176,13 @@ public class HydrolysistNpcBody : ModNPC
         //Spawn only one
         if (NPC.AnyNPCs(ModContent.NPCType<HydrolysistNpcBody>()))
             return 0f;
+        
+        if (HydrolysistWorldSystem.unlockedHydrolysist)
+            return 0f;
 
         if (DownedBossSystem.downedHydrolysistBoss)
             return 0f;
 
-        // Make him fairly rare; tweak to taste
         return 0.99f; // 1% of normal spawns
     }
 
