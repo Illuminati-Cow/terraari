@@ -129,16 +129,16 @@ public class ShimmerLightning : ModProjectile
             return false;
 
         Projectile.NewProjectile(
-            Projectile.GetSource_FromAI(),
-            Projectile.Center,
-            -Vector2.UnitY * 2.5f,
-            ModContent.ProjectileType<BigBubble>(),
-            50,
-            4.5f,
-            Projectile.owner,
-            0,
-            0,
-            1 // Do not spawn bubbles
+            spawnSource: Projectile.GetSource_FromAI(),
+            position: Projectile.Center,
+            velocity: -Vector2.UnitY * 5f,
+            Type: ModContent.ProjectileType<SmallBubble>(),
+            Damage: 50,
+            KnockBack: 4.5f,
+            Owner: Projectile.owner,
+            ai0: 0,
+            ai1: 0,
+            ai2: 1 // Do not spawn bubbles
         );
         Projectile.Kill();
         return true;

@@ -12,6 +12,7 @@ namespace Terraari.Content.Projectiles;
 public class BigBubble : ModProjectile
 {
     private Effect shader;
+    private float seed;
 
     private Player HomingTarget
     {
@@ -48,6 +49,7 @@ public class BigBubble : ModProjectile
         Projectile.alpha = 255; // Completely transparent
 
         shader = ShaderHelper.SetUpShimmerShader();
+        seed = (float)Random.Shared.NextDouble();
     }
 
     public override void OnSpawn(IEntitySource source)
@@ -61,7 +63,19 @@ public class BigBubble : ModProjectile
         Vector2 origin = texture.Size() / 2f;
         Vector2 mainPos = Projectile.Center - Main.screenPosition;
         
-        ShaderHelper.DrawShimmerShader(shader, texture, mainPos, frame, Color.White, Projectile.rotation, origin, Projectile.scale, SpriteEffects.None, 0);
+        ShaderHelper.DrawShimmerShader(
+            shader, 
+            texture, 
+            mainPos, 
+            frame, 
+            Color.White, 
+            Projectile.rotation, 
+            origin, 
+            Projectile.scale, 
+            SpriteEffects.None, 
+            0,
+            seed * 1000f
+        );
 
         // Return false to prevent default drawing
         return false;
