@@ -18,6 +18,7 @@ public class HydrolysistNpcBody : ModNPC
         $"{Mod.Name}/Content/NPCs/HydrolysistNPC/{nameof(HydrolysistNpcBody)}";
     public const string ShopName = "Shop";
     public int NumberOfTimesTalkedTo = 0;
+    private int summonTalkProgress = 0;
 
     private static int ShimmerHeadIndex;
     private static Profiles.StackedNPCProfile NPCProfile;
@@ -189,125 +190,77 @@ public class HydrolysistNpcBody : ModNPC
     public override bool CanChat() => true;
 
     public override void SetChatButtons(ref string button, ref string button2)
-    {
-        button = "Summon";
-        // button2 = Language.GetTextValue("LegacyInterface.28"); // This is the key to the word "Shop"
-    }
-
-    public override void OnChatButtonClicked(bool firstButton, ref string shopName)
-    {
-        if (!firstButton)
-            return;
-
-        //Logic for spawning as TownNPC
-
-        // if (Main.netMode != NetmodeID.MultiplayerClient)
-        // {
-        //     // Mark him as unlocked and transform into the town NPC version
-        //     HydrolysistWorldSystem.unlockedHydrolysist = true;
-        //     NPC.Transform(ModContent.NPCType<HydrolysistNpcBody>());
-        // }
-
-        Player player = Main.LocalPlayer;
-
-        // Only do spawn logic on server/singleplayer
-        if (Main.netMode == NetmodeID.MultiplayerClient)
-            return;
-
-        // Spawn the boss a bit above the player
-        int spawnX = (int)player.Center.X;
-        int spawnY = (int)player.Center.Y - 200;
-
-        int bossIndex = NPC.NewNPC(
-            NPC.GetSource_FromAI(),
-            spawnX,
-            spawnY,
-            ModContent.NPCType<HydrolysistBossBody>()
-        );
-
-        if (bossIndex >= 0 && bossIndex < Main.maxNPCs && Main.netMode == NetmodeID.Server)
         {
-            NetMessage.SendData(MessageID.SyncNPC, number: bossIndex);
+            // Single Talk button
+            button = "Talk";
+            button2 = "";
         }
 
-        NPC.StrikeInstantKill();
-    }
+        public override void OnChatButtonClicked(bool firstButton, ref string shopName)
+        {
+            if (!firstButton)
+                return;
 
-    //--- USED FOR DIALOGUE --- Commented out because it uses example dialogue which is not in this project.
+            // Advance our little “ritual” sequence
+            summonTalkProgress++;
 
-    // public override string GetChat() {
-    // 	WeightedRandom<string> chat = new WeightedRandom<string>();
+            if (summonTalkProgress == 1)
+            {
+                // First line – placeholder, change later
+                Main.npcChatText = "Mate, I need you listen to closely. There is more to this place than you see.";
+                return;
+            }
 
-    // 	int partyGirl = NPC.FindFirstNPC(NPCID.PartyGirl);
-    // 	if (partyGirl >= 0 && Main.rand.NextBool(4)) {
-    // 		chat.Add(Language.GetTextValue("Mods.ExampleMod.Dialogue.ExamplePerson.PartyGirlDialogue", Main.npc[partyGirl].GivenName));
-    // 	}
-    // 	// These are things that the NPC has a chance of telling you when you talk to it.
-    // 	chat.Add(Language.GetTextValue("Mods.ExampleMod.Dialogue.ExamplePerson.StandardDialogue1"));
-    // 	chat.Add(Language.GetTextValue("Mods.ExampleMod.Dialogue.ExamplePerson.StandardDialogue2"));
-    // 	chat.Add(Language.GetTextValue("Mods.ExampleMod.Dialogue.ExamplePerson.StandardDialogue3"));
-    // 	chat.Add(Language.GetTextValue("Mods.ExampleMod.Dialogue.ExamplePerson.StandardDialogue4"));
-    // 	chat.Add(Language.GetTextValue("Mods.ExampleMod.Dialogue.ExamplePerson.CommonDialogue"), 5.0);
-    // 	chat.Add(Language.GetTextValue("Mods.ExampleMod.Dialogue.ExamplePerson.RareDialogue"), 0.1);
+            if (summonTalkProgress == 2)
+            {
+                Main.npcChatText = "I can show you what I have discovered, but my research has had some... messy results at times.";
+                return;
+            }
+            if (summonTalkProgress == 3)
+            {
+                Main.npcChatText = "But I am so close to discovering the shimmers's true potential! If you truly wish to see the results of my research, it could be fascinating, or deadly.";
+                return;
+            }
 
-    // 	NumberOfTimesTalkedTo++;
-    // 	if (NumberOfTimesTalkedTo >= 10) {
-    // 		// This counter is linked to a single instance of the NPC, so if ExamplePerson is killed, the counter will reset.
-    // 		chat.Add(Language.GetTextValue("Mods.ExampleMod.Dialogue.ExamplePerson.TalkALot"));
-    // 	}
 
-    // 	string chosenChat = chat; // chat is implicitly cast to a string. This is where the random choice is made.
+            Player player = Main.LocalPlayer;
 
-    // 	// Here is some additional logic based on the chosen chat line. In this case, we want to display an item in the corner for StandardDialogue4.
-    // 	if (chosenChat == Language.GetTextValue("Mods.ExampleMod.Dialogue.ExamplePerson.StandardDialogue4")) {
-    // 		// Main.npcChatCornerItem shows a single item in the corner, like the Angler Quest chat.
-    // 		Main.npcChatCornerItem = ItemID.HiveBackpack;
-    // 	}
+            // Only do spawn logic on server / singleplayer
+            if (Main.netMode == NetmodeID.MultiplayerClient)
+                return;
 
-    // 	return chosenChat;
-    // }
+            int spawnX = (int)player.Center.X;
+            int spawnY = (int)player.Center.Y - 200;
 
-    // public override void SetChatButtons(ref string button, ref string button2)
-    // { // What the chat buttons are when you open up the chat UI
-    // 	button = Language.GetTextValue("LegacyInterface.28"); // This is the key to the word "Shop"
-    // 	button2 = "Awesomeify";
-    // 	if (Main.LocalPlayer.HasItem(ItemID.HiveBackpack))
-    // 	{
-    // 		button = "Upgrade " + Lang.GetItemNameValue(ItemID.HiveBackpack);
-    // 	}
-    // }
+            int bossIndex = NPC.NewNPC(
+                NPC.GetSource_FromAI(),
+                spawnX,
+                spawnY,
+                ModContent.NPCType<HydrolysistBossBody>()
+            );
 
-    // --- NPC SHOP WITH ITEMS --- Commented out as might crash due to using example items.
+            if (bossIndex >= 0 && bossIndex < Main.maxNPCs && Main.netMode == NetmodeID.Server)
+            {
+                NetMessage.SendData(MessageID.SyncNPC, number: bossIndex);
+            }
 
-    // Not completely finished, but below is what the NPC will sell
-    // public override void AddShops() {
-    // 	var npcShop = new NPCShop(Type, ShopName)
-    // 		.Add<ExampleItem>()
-    // 		//.Add<EquipMaterial>()
-    // 		//.Add<BossItem>()
-    // 		.Add(new Item(ModContent.ItemType<Items.Placeable.Furniture.ExampleWorkbench>()) { shopCustomPrice = Item.buyPrice(copper: 15) }) // This example sets a custom price, ExampleNPCShop.cs has more info on custom prices and currency.
-    // 		.Add<Items.Placeable.Furniture.ExampleChair>()
-    // 		.Add<Items.Placeable.Furniture.ExampleDoor>()
-    // 		.Add<Items.Placeable.Furniture.ExampleBed>()
-    // 		.Add<Items.Placeable.Furniture.ExampleChest>()
-    // 		.Add<Items.Tools.ExamplePickaxe>()
-    // 		.Add<Items.Tools.ExampleHamaxe>()
-    // 		.Add<Items.Consumables.ExampleHealingPotion>(new Condition("Mods.ExampleMod.Conditions.PlayerHasLifeforceBuff", () => Main.LocalPlayer.HasBuff(BuffID.Lifeforce)))
-    // 		.Add<Items.Weapons.ExampleSword>(Condition.MoonPhasesQuarter0)
-    // 		//.Add<ExampleGun>(Condition.MoonPhasesQuarter1)
-    // 		.Add<Items.Ammo.ExampleBullet>(Condition.MoonPhasesQuarter1)
-    // 		.Add<Items.Weapons.ExampleStaff>(ExampleConditions.DownedMinionBoss)
-    // 		.Add<ExampleOnBuyItem>()
-    // 		.Add(ItemID.AcornAxe) // Here is an example of how to sell an existing vanilla item.
-    // 		.Add<Items.Weapons.ExampleYoyo>(Condition.IsNpcShimmered); // Let's sell an yoyo if this NPC is shimmered!
+            Main.npcChatText = "Very well… let the waters break.";
 
-    // 	if (ModContent.GetInstance<ExampleModConfig>().ExampleWingsToggle) {
-    // 		npcShop.Add<ExampleWings>(ExampleConditions.InExampleBiome);
-    // 	}
+            // Kill the summoner NPC
+            NPC.StrikeInstantKill();
 
-    // 	if (ModContent.TryFind("SummonersAssociation/BloodTalisman", out ModItem bloodTalisman)) {
-    // 		npcShop.Add(bloodTalisman.Type);
-    // 	}
-    // 	npcShop.Register(); // Name of this shop tab
-    // }
+            // Reset sequence in case something weird happens
+            summonTalkProgress = 0;
+        }
+
+
+    public override string GetChat()
+        {
+            // Reset the sequence whenever you start talking to him again
+            summonTalkProgress = 0;
+
+            // Placeholder text – change later to whatever intro you want
+            return "Oi, I am The Hydrolisist… You don’t know what that is? Well for someone like you I will simply say that I study liquids.";
+        }
+
 }
