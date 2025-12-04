@@ -184,13 +184,22 @@ public class BigBubble : ModProjectile
 
         const int numBubbles = 32;
         int bubbleDamage = Projectile.damage / numBubbles * 2;
-        for (int i = 0; i < numBubbles; i++)
+        for (int i = 0; i < numBubbles/2; i++)
         {
-            Vector2 velocity = Vector2.One.RotatedBy(MathHelper.ToRadians(360f / numBubbles * i)); // Circular velocity
+            Vector2 velocity = Vector2.One.RotatedBy(MathHelper.ToRadians(360f / (numBubbles/2f) * i)); // Circular velocity
             Projectile.NewProjectileDirect(
                 Projectile.GetSource_FromAI(),
                 Projectile.Center,
-                velocity,
+                velocity * 6f,
+                ModContent.ProjectileType<SmallBubble>(),
+                bubbleDamage,
+                4.5f,
+                Main.myPlayer
+            );
+            Projectile.NewProjectileDirect(
+                Projectile.GetSource_FromAI(),
+                Projectile.Center,
+                velocity * (float)(Random.Shared.NextDouble() * 3f + 1),
                 ModContent.ProjectileType<SmallBubble>(),
                 bubbleDamage,
                 4.5f,
