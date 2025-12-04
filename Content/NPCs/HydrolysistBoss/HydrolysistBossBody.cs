@@ -101,7 +101,7 @@ public class HydrolysistBossBody : ModNPC
         NPC.damage = 70;
         // TODO: Set defense to a reasonable value NPCd on relative boss progression
         NPC.defense = 40;
-        NPC.lifeMax = 60_000;
+        NPC.lifeMax = 47_500;
         NPC.HitSound = SoundID.NPCHit55;
         NPC.DeathSound = SoundID.NPCDeath59;
         NPC.alpha = 55;
