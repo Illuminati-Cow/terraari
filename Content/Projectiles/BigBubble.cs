@@ -59,8 +59,6 @@ public class BigBubble : ModProjectile
 
     public override bool PreDraw(ref Color lightColor)
     {
-    public override bool PreDraw(ref Color lightColor)
-    {
         Texture2D texture = ModContent.Request<Texture2D>(Texture).Value;
         Rectangle frame = new(0, 0, texture.Width, texture.Height);
         Vector2 origin = texture.Size() / 2f;

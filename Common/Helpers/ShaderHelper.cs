@@ -15,20 +15,13 @@ public static class ShaderHelper
     {
         if (Main.netMode == NetmodeID.Server)
             return null;
-<<<<<<< HEAD
-        return ModContent
-=======
         Effect shader = ModContent
->>>>>>> 471b40fb519f17405f316ad0423f3224d89b3c0a
             .Request<Effect>(
                 "terraari/Assets/Effects/ShimmerGlow",
                 ReLogic.Content.AssetRequestMode.ImmediateLoad
             )
             .Value;
-<<<<<<< HEAD
-=======
         return shader;
->>>>>>> 471b40fb519f17405f316ad0423f3224d89b3c0a
     }
 
     public static void DrawShimmerShader(
@@ -41,12 +34,8 @@ public static class ShaderHelper
         Vector2 origin,
         float scale,
         SpriteEffects spriteEffects,
-<<<<<<< HEAD
-        float layerDepth
-=======
         float layerDepth,
         float seed = 0
->>>>>>> 471b40fb519f17405f316ad0423f3224d89b3c0a
     )
     {
         // Don't draw on server
