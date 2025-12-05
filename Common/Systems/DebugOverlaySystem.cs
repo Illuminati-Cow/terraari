@@ -374,28 +374,28 @@ public class DebugKeybindsSystem : ModSystem
         ClearDrawings = null;
     }
 
-    public override void PostUpdateInput()
-    {
-        if (ToggleDebug != null && ToggleDebug.JustPressed)
-        {
-            DebugOverlaySystem.Enabled = !DebugOverlaySystem.Enabled;
-            Main.NewText(
-                $"Debug overlay: {(DebugOverlaySystem.Enabled ? "ON" : "OFF")}",
-                Color.Yellow
-            );
-        }
-        if (ToggleGrid != null && ToggleGrid.JustPressed)
-        {
-            DebugOverlaySystem.ShowTileGrid = !DebugOverlaySystem.ShowTileGrid;
-            Main.NewText(
-                $"Tile grid: {(DebugOverlaySystem.ShowTileGrid ? "ON" : "OFF")}",
-                Color.Yellow
-            );
-        }
-        if (ClearDrawings != null && ClearDrawings.JustPressed)
-        {
-            DebugOverlaySystem.ClearAll();
-            Main.NewText("Cleared debug drawings", Color.Yellow);
-        }
-    }
+    // public override void PostUpdateInput()
+    // {
+    //     if (ToggleDebug != null && ToggleDebug.JustPressed)
+    //     {
+    //         DebugOverlaySystem.Enabled = !DebugOverlaySystem.Enabled;
+    //         Main.NewText(
+    //             $"Debug overlay: {(DebugOverlaySystem.Enabled ? "ON" : "OFF")}",
+    //             Color.Yellow
+    //         );
+    //     }
+    //     if (ToggleGrid != null && ToggleGrid.JustPressed)
+    //     {
+    //         DebugOverlaySystem.ShowTileGrid = !DebugOverlaySystem.ShowTileGrid;
+    //         Main.NewText(
+    //             $"Tile grid: {(DebugOverlaySystem.ShowTileGrid ? "ON" : "OFF")}",
+    //             Color.Yellow
+    //         );
+    //     }
+    //     if (ClearDrawings != null && ClearDrawings.JustPressed)
+    //     {
+    //         DebugOverlaySystem.ClearAll();
+    //         Main.NewText("Cleared debug drawings", Color.Yellow);
+    //     }
+    // }
 }

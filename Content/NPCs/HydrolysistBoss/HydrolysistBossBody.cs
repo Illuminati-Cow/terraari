@@ -67,11 +67,11 @@ public class HydrolysistBossBody : ModNPC
 
     private void DebugPrint(string msg)
     {
-        CombatText.NewText(
-            new Rectangle((int)NPC.position.X, (int)NPC.position.Y, 100, 100),
-            Color.White,
-            msg
-        );
+        // CombatText.NewText(
+        //     new Rectangle((int)NPC.position.X, (int)NPC.position.Y, 100, 100),
+        //     Color.White,
+        //     msg
+        // );
     }
 
     public override void SetStaticDefaults()
@@ -542,7 +542,7 @@ public class HydrolysistBossBody : ModNPC
 
         public void Exit(IState<HydrolysistContext> to, HydrolysistContext context)
         {
-            context.Boss.DebugPrint($"Transitioning to {to.GetType().Name}");
+            // context.Boss.DebugPrint($"Transitioning to {to.GetType().Name}");
         }
 
         public void Tick(HydrolysistContext context)
@@ -635,7 +635,7 @@ public class HydrolysistBossBody : ModNPC
                     if (context.Boss.Timer <= 0)
                     {
                         context.Boss.Timer = CHARGE_TIME;
-                        context.Boss.DebugPrint("Entering Charging Phase");
+                        // context.Boss.DebugPrint("Entering Charging Phase");
                     }
                     ChargeLightning(context);
                     break;

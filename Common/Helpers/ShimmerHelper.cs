@@ -60,10 +60,10 @@ public static class ShimmerHelper
         if (!DebugShimmer)
             return;
         // Print to chat in SP, to server log in MP
-        if (Main.netMode == NetmodeID.SinglePlayer)
-            Main.NewText(msg);
-        else
-            Logging.PublicLogger.Info($"[ShimmerHelper] {msg}");
+        // if (Main.netMode == NetmodeID.SinglePlayer)
+        //     Main.NewText(msg);
+        // else
+        //     Logging.PublicLogger.Info($"[ShimmerHelper] {msg}");
     }
 
     public static Vector2? FindSpotWithoutShimmer(Entity entity, int expand, bool allowSolidTop)

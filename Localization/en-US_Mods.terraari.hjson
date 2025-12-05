@@ -22,7 +22,7 @@ NPCs: {
 		}
 	}
 
-	HydrolysistBossBody.DisplayName: Hydrolysist Boss Body
+	HydrolysistBossBody.DisplayName: Hydrolysist
 
 	HydrolysistTownNPC: {
 		DisplayName: Hydrolysist
