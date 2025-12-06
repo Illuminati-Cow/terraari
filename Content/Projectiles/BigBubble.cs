@@ -5,9 +5,9 @@ using Terraria;
 using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
-using ShaderHelper = Terraari.Common.Helpers.ShaderHelper;
+using ShaderHelper = TheHydrolysist.Common.Helpers.ShaderHelper;
 
-namespace Terraari.Content.Projectiles;
+namespace TheHydrolysist.Content.Projectiles;
 
 public class BigBubble : ModProjectile
 {

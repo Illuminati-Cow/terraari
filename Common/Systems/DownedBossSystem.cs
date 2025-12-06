@@ -2,7 +2,7 @@
 using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
 
-namespace Terraari.Common.Systems;
+namespace TheHydrolysist.Common.Systems;
 
 // Acts as a container for "downed boss" flags.
 // Set a flag like this in your bosses OnKill hook:

@@ -3,8 +3,8 @@
   <Import Project="..\tModLoader.targets" />
   <!-- General -->
   <PropertyGroup>
-    <AssemblyName>Terraari</AssemblyName>
-    <RootNamespace>Terraari</RootNamespace>
+    <AssemblyName>TheHydrolysist</AssemblyName>
+    <RootNamespace>TheHydrolysist</RootNamespace>
   </PropertyGroup>
   <!-- References -->
   <ItemGroup>

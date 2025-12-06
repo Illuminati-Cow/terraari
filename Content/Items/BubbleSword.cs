@@ -1,10 +1,10 @@
 using System;
-using Terraari.Content.Projectiles;
+using TheHydrolysist.Content.Projectiles;
 using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
 
-namespace Terraari.Content.Items
+namespace TheHydrolysist.Content.Items
 {
     public class BubbleSword : ModItem
     {

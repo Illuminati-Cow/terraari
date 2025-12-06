@@ -7,7 +7,7 @@ using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
 
-namespace Terraari.Common.Helpers;
+namespace TheHydrolysist.Common.Helpers;
 
 public static class ShaderHelper
 {
@@ -17,7 +17,7 @@ public static class ShaderHelper
             return null;
         Effect shader = ModContent
             .Request<Effect>(
-                "terraari/Assets/Effects/ShimmerGlow",
+                "TheHydrolysist/Assets/Effects/ShimmerGlow",
                 ReLogic.Content.AssetRequestMode.ImmediateLoad
             )
             .Value;

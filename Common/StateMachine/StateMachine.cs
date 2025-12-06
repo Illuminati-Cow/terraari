@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Terraari.Common.StateMachine;
+namespace TheHydrolysist.Common.StateMachine;
 
 public class StateMachine<TContext>
     where TContext : class

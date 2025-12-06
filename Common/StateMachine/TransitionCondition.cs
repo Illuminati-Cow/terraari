@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Terraari.Common.StateMachine;
+namespace TheHydrolysist.Common.StateMachine;
 
 public struct TransitionCondition(Func<bool> predicate)
 {

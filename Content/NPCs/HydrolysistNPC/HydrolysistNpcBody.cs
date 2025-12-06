@@ -1,7 +1,7 @@
 using Mono.CompilerServices.SymbolWriter;
 using Steamworks;
-using Terraari.Common.Systems;
-using terraari.Content.NPCs.HydrolysistBoss;
+using TheHydrolysist.Common.Systems;
+using TheHydrolysist.Content.NPCs.HydrolysistBoss;
 using Terraria;
 using Terraria.Audio;
 using Terraria.GameContent;
@@ -10,7 +10,7 @@ using Terraria.ID;
 using Terraria.Localization;
 using Terraria.ModLoader;
 
-namespace terraari.Content.NPCs;
+namespace TheHydrolysist.Content.NPCs;
 
 [AutoloadHead]
 public class HydrolysistNpcBody : ModNPC

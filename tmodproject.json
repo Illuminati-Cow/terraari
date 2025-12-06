@@ -1,7 +1,7 @@
 {
-  "rootNamespace": "terraari",
+  "rootNamespace": "TheHydrolysist",
   "fileMap": {
-    "Content\\Projectiles\\Bubble.cs": "terraari.Content.Projectiles",
-    "Common\\Helpers\\ShaderHelper.cs": "terraari.Common.Helpers"
+    "Content\\Projectiles\\Bubble.cs": "TheHydrolysist.Content.Projectiles",
+    "Common\\Helpers\\ShaderHelper.cs": "TheHydrolysist.Common.Helpers"
   }
 }

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using Steamworks;
-using Terraari.Common.Systems;
+using TheHydrolysist.Common.Systems;
 using Terraria;
 using Terraria.GameContent;
 using Terraria.GameContent.Events;
@@ -9,7 +9,7 @@ using Terraria.ID;
 using Terraria.Localization;
 using Terraria.ModLoader;
 
-namespace terraari.Content.NPCs
+namespace TheHydrolysist.Content.NPCs
 {
     [AutoloadHead]
     public class HydrolysistTownNPC : ModNPC
@@ -114,7 +114,7 @@ namespace terraari.Content.NPCs
             // ========== First interaction ==========
             if (NumberOfTimesTalkedTo == 1)
             {
-                return "Oi, my name is The Hydrolisist... You don't know what that is? Well, for someone like you I will simply say that I study liquids.";
+                return "Oi, my name is The Hydrolysist... You don't know what that is? Well, for someone like you I will simply say that I study liquids.";
             }
 
             // Graveyard

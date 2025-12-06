@@ -2,7 +2,7 @@ using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
 
 // File for changing NPC to TownNPC
-namespace terraari.Content.NPCs;
+namespace TheHydrolysist.Content.NPCs;
 
 public class HydrolysistWorldSystem : ModSystem
 {

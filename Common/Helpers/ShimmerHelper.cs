@@ -4,7 +4,7 @@ using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
 
-namespace Terraari.Common.Helpers;
+namespace TheHydrolysist.Common.Helpers;
 
 public static class ShimmerHelper
 {

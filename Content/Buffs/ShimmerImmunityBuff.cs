@@ -2,7 +2,7 @@
 using Terraria.ID;
 using Terraria.ModLoader;
 
-namespace Terraari.Content.Buffs;
+namespace TheHydrolysist.Content.Buffs;
 
 public class ShimmerImmunityBuff : ModBuff
 {

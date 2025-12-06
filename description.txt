@@ -1,1 +1,11 @@
-Modify this file with a description of your mod.
+The Hydrolysist is a scientist from a faraway land, arriving here to study the liquid known as shimmer with its many interesting and wondrous properties. However before he can he becomes corrupted by it causing him to lash out against the player.
+
+The Hydrolysist boss has 3 main attacks:
+
+Bubble Swarm: a large area attack where the Hydrolysist spews tiny bubbles in a cone towards the player. Keeping your distance is important to dodge this attack.
+
+Giant bubble: This is a homing bubble attack that follows the player and after contact or a small duration, explodes into a cluster of bubbles.
+
+Shimmer Lightning: A zigzagging lightning attack that shoots out from the Hydrolysist towards the player. It moves in a more sporadic pattern causing it to be harder to dodge.
+
+After defeating the Hydrolysist, they will join you at your base where you can interact and learn more about them.

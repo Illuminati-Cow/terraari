@@ -1,12 +1,33 @@
 Mods: {
-	Terraari: {
+	TheHydrolysist: {
 		NPCs: {
 			HydrolysistBossBody.DisplayName: Hydrolysist
 
 			HydrolysistNpcBody: {
-				Upgraded: Mods.Terraari.NPCs.HydrolysistNpcBody.Upgraded
-				DeathMessage: Mods.Terraari.NPCs.HydrolysistNpcBody.DeathMessage
+				Upgraded: Mods.TheHydrolysist.NPCs.HydrolysistNpcBody.Upgraded
+				DeathMessage: Mods.TheHydrolysist.NPCs.HydrolysistNpcBody.DeathMessage
 				DisplayName: Hydrolysist
+
+				TownNPCMood: {
+					Content: I am content.
+					NoHome: I hate not having a home.
+					FarFromHome: I am too far from home.
+					LoveSpace: I love having so much space.
+					DislikeCrowded: I dislike how crowded I am.
+					HateCrowded: I hate how crowded I am.
+					LikeBiome: I like {BiomeName}.
+					DislikeBiome: I dislike {BiomeName}.
+					LoveNPC: I love {NPCName}.
+					LikeNPC: I like {NPCName}.
+					DislikeNPC: I dislike {NPCName}.
+					HateNPC: I hate {NPCName}.
+					LikeNPC_Princess: I like {NPCName}.
+					Princess_LovesNPC: I like {NPCName}.
+				}
+			}
+
+			HydrolysistTownNPC: {
+				DisplayName: Hydrolysist Town N P C
 
 				TownNPCMood: {
 					Content: I am content.
@@ -44,7 +65,7 @@ Mods: {
 		Buffs: {
 			ShimmerImmunityBuff: {
 				DisplayName: Shimmer Immunity Buff
-				Description: Mods.Terraari.Buffs.ShimmerImmunityBuff.Description
+				Description: Mods.TheHydrolysist.Buffs.ShimmerImmunityBuff.Description
 			}
 		}
 

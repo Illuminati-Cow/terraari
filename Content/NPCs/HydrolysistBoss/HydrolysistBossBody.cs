@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Terraari.Common.StateMachine;
-using Terraari.Common.Systems;
-using Terraari.Content.Buffs;
-using terraari.Content.NPCs;
-using Terraari.Content.Projectiles;
+using TheHydrolysist.Common.StateMachine;
+using TheHydrolysist.Common.Systems;
+using TheHydrolysist.Content.Buffs;
+using TheHydrolysist.Content.NPCs;
+using TheHydrolysist.Content.Projectiles;
 using Terraria;
 using Terraria.Audio;
 using Terraria.DataStructures;
@@ -16,10 +16,10 @@ using Terraria.Graphics.CameraModifiers;
 using Terraria.ID;
 using Terraria.ModLoader;
 using AnimationFrameData = Terraria.Animation.AnimationFrameData;
-using ShaderHelper = Terraari.Common.Helpers.ShaderHelper;
-using ShimmerHelper = Terraari.Common.Helpers.ShimmerHelper;
+using ShaderHelper = TheHydrolysist.Common.Helpers.ShaderHelper;
+using ShimmerHelper = TheHydrolysist.Common.Helpers.ShimmerHelper;
 
-namespace terraari.Content.NPCs.HydrolysistBoss;
+namespace TheHydrolysist.Content.NPCs.HydrolysistBoss;
 
 [AutoloadBossHead]
 public class HydrolysistBossBody : ModNPC
@@ -84,7 +84,7 @@ public class HydrolysistBossBody : ModNPC
         // {
         //     Scale = 1f,
         //     PortraitScale = 1f,
-        //     CustomTexturePath = "terraari/ExtraTextures/Bestiary/HydrolysistBoss_Bestiary",
+        //     CustomTexturePath = "TheHydrolysist/ExtraTextures/Bestiary/HydrolysistBoss_Bestiary",
         // };
         // NPCID.Sets.NPCBestiaryDrawOffset[Type] = value;
         NPCID.Sets.MPAllowedEnemies[Type] = true;

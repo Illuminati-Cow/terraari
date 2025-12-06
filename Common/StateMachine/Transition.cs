@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 
-namespace Terraari.Common.StateMachine;
+namespace TheHydrolysist.Common.StateMachine;
 
 public struct Transition<TContext>
     where TContext : class

@@ -6,16 +6,16 @@ using Terraria;
 using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
-using ShaderHelper = Terraari.Common.Helpers.ShaderHelper;
+using ShaderHelper = TheHydrolysist.Common.Helpers.ShaderHelper;
 
-namespace Terraari.Content.Projectiles;
+namespace TheHydrolysist.Content.Projectiles;
 
 public class SmallBubble : ModProjectile
 {
     private Effect shader;
     private float seed;
 
-    public override string GlowTexture => "Terraari/Content/Projectiles/SmallBubble_e";
+    public override string GlowTexture => "TheHydrolysist/Content/Projectiles/SmallBubble_e";
 
     public const int GOAL_ALPHA = 40;
 

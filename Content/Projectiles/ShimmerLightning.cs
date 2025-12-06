@@ -9,7 +9,7 @@ using Terraria.ID;
 using Terraria.ModLoader;
 using Terraria.Utilities;
 
-namespace Terraari.Content.Projectiles;
+namespace TheHydrolysist.Content.Projectiles;
 
 public class ShimmerLightning : ModProjectile
 {

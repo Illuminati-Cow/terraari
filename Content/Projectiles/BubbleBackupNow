@@ -4,7 +4,7 @@ using Terraria.ModLoader;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace terraari.Content.Projectiles
+namespace TheHydrolysist.Content.Projectiles
 {
     public class Bubble : ModProjectile
     {
@@ -38,7 +38,7 @@ namespace terraari.Content.Projectiles
             {
                 // Load your .xnb shader file (without the .xnb extension)
                 // Place the .xnb file in: YourMod/Content/Effects/
-                shader = ModContent.Request<Effect>("terraari/Assets/Effects/ShimmerGlow",
+                shader = ModContent.Request<Effect>("TheHydrolysist/Assets/Effects/ShimmerGlow",
                     ReLogic.Content.AssetRequestMode.ImmediateLoad).Value;
             }
         }

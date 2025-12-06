@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace Terraari.Common.StateMachine;
+namespace TheHydrolysist.Common.StateMachine;
 
 /// <summary>
 /// Represents a state in a state machine.

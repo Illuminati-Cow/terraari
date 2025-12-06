@@ -1,4 +1,4 @@
-# Terraari Team Super Cool Mod
+# TheHydrolysist Team Super Cool Mod
 - Super cool boss
 - Awesome items
 - Epic wizard tower

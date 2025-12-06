@@ -6,7 +6,7 @@ using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
 
-namespace Terraari.Common.Systems;
+namespace TheHydrolysist.Common.Systems;
 
 public class DebugOverlaySystem : ModSystem
 {
